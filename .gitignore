@@ -1,0 +1,75 @@
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+### Java ###
+*.class
+*.log
+*.ctxt
+*.jar
+*.war
+*.ear
+
+### Gradle ###
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/     # src içində build qovluqlarını da ignore et
+!**/src/test/**/build/
+
+### Eclipse (əgər kimsə istifadə edərsə) ###
+.classpath
+.project
+.settings/
+
+### OS spesifik ###
+.DS_Store
+Thumbs.db
+
+### Logs ###
+logs/
+*.log
+*.out
+*.gz
+
+### Coverage / Reports ###
+*.ec
+*.coverage
+*.coverage.xml
+*.hprof
+*.jacoco.exec
+*.jfr
+*.h2.db
+*.mv.db
+
+### Local test data ###
+*.local
+*.env
+.env.*
+*.properties.local
+
+### Security ###
+keystore*.p12
+*.pem
+*.crt
+*.key
+
+### Temporary files ###
+tmp/
+*.tmp
+*.swp
+*~
+
+### Node / Frontend (əgər gateway-də və ya başqa modulda React/Angular varsa) ###
+node_modules/
+dist/
+npm-debug.log
+yarn-error.log
+
+### Docker ###
+*.pid
+*.seed
+*.pid.lock

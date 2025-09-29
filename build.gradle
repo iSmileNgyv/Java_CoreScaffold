@@ -1,0 +1,30 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.corescaffold'
+version = '1.0.0'
+
+allprojects {
+    repositories {
+        mavenCentral()
+    }
+}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'application'
+
+    java {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+
+    dependencies {
+        testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
+    }
+
+    test {
+        useJUnitPlatform()
+    }
+}

@@ -1,0 +1,29 @@
+server:
+  port: 8080
+  http2:
+    enabled: true
+  ssl:
+      key-store-type: PKCS12
+      key-store: classpath:keystore.p12
+      key-store-password: password
+      key-password: password
+      enabled: true
+spring:
+  application:
+    name: GrpcGateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          httpclient:
+            ssl:
+              use-insecure-trust-manager: true
+          routes:
+            - id: auth
+              uri:
+                http://localhost:8081
+              predicates:
+                - Path=/auth/v1/**
+              filters:
+                - AddResponseHeader=X-Forwarded-Proto, https
+                - RewritePath=/grpc/auth/(?<remaining>.*), /${remaining}

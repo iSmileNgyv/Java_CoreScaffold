@@ -1,8 +1,8 @@
 package com.ismile.core.auth.service;
 
-import com.ismile.auth.AuthServiceGrpc;
-import com.ismile.auth.HelloReply;
-import com.ismile.auth.HelloRequest;
+import auth.AuthServiceGrpc;
+import auth.HelloReply;
+import auth.HelloRequest;
 import io.grpc.stub.StreamObserver;
 import org.springframework.grpc.server.service.GrpcService;
 

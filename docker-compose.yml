@@ -1,0 +1,12 @@
+services:
+  envoy:
+    image: envoyproxy/envoy:v1.31-latest
+    container_name: envoy-gateway
+    ports:
+      - "9090:9090"
+      - "9901:9901"
+    volumes:
+      - ./envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
+    command: /usr/local/bin/envoy -c /etc/envoy/envoy.yaml -l info
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

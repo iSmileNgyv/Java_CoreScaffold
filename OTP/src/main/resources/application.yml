@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: OTP
+  grpc:
+    server:
+      port: 9092

@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package otp;
+
+service OtpService {
+  rpc SendCode (OtpRequest) returns (OtpReply);
+}
+
+message OtpRequest {
+  string name = 1;
+}
+
+message OtpReply {
+  string message = 1;
+}

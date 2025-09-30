@@ -43,6 +43,10 @@ dependencies {
 	implementation "com.google.protobuf:protobuf-java:${protobufVersion}"
 	implementation "com.google.protobuf:protobuf-java-util:${protobufVersion}"
 	implementation 'javax.annotation:javax.annotation-api:1.3.2'
+	implementation 'io.grpc:grpc-services:1.60.0'
+	implementation 'io.envoyproxy.controlplane:api:1.0.45'
+	implementation 'io.grpc:grpc-services:1.60.0'
+	implementation 'com.google.api.grpc:proto-google-common-protos:2.29.0'
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -68,6 +72,18 @@ protobuf {
 			grpc {}
 		}
 	}
+}
+
+sourceSets {
+	main {
+		proto {
+			srcDir 'src/main/proto'
+		}
+	}
+}
+
+tasks.withType(ProcessResources) {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 tasks.named('test') {

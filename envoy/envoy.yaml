@@ -30,6 +30,19 @@ static_resources:
                             cluster: otp
 
                 http_filters:
+                  # 🔑 Birinci ext_authz - bütün istəklər buradan keçir
+                  - name: envoy.filters.http.ext_authz
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+                      transport_api_version: V3
+                      grpc_service:
+                        envoy_grpc:
+                          cluster_name: auth_external
+                        timeout: 1s
+                      # Auth servisi özü üçün yoxlama tələb etməsin
+                      failure_mode_allow: false
+
+                  # Router ən sonda olmalıdır
                   - name: envoy.filters.http.router
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -52,13 +65,33 @@ static_resources:
                     socket_address:
                       address: host.docker.internal
                       port_value: 9091
+
+    # 🔑 Auth external authz üçün ayrı cluster
+    - name: auth_external
+      type: STRICT_DNS
+      typed_extension_protocol_options:
+        envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+          "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+          explicit_http_config:
+            http2_protocol_options: {}
+      dns_lookup_family: V4_ONLY
+      load_assignment:
+        cluster_name: auth_external
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: host.docker.internal
+                      port_value: 9091
+
     - name: otp
       type: STRICT_DNS
       typed_extension_protocol_options:
         envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
           "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
           explicit_http_config:
-            http2_protocol_options: { }
+            http2_protocol_options: {}
       dns_lookup_family: V4_ONLY
       load_assignment:
         cluster_name: otp
@@ -69,19 +102,6 @@ static_resources:
                     socket_address:
                       address: host.docker.internal
                       port_value: 9092
-  http_filters:
-    - name: envoy.filters.http.ext_authz
-      typed_config:
-        "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
-        transport_api_version: V3
-        grpc_service:
-          envoy_grpc:
-            cluster_name: auth   # 🔑 All requests first go here for validation
-          timeout: 0.5s
-    - name: envoy.filters.http.router
-      typed_config:
-        "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-
 
 admin:
   address:

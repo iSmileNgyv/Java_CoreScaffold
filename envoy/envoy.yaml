@@ -76,7 +76,7 @@ static_resources:
         transport_api_version: V3
         grpc_service:
           envoy_grpc:
-            cluster_name: auth
+            cluster_name: auth   # 🔑 All requests first go here for validation
           timeout: 0.5s
     - name: envoy.filters.http.router
       typed_config:

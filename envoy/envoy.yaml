@@ -69,6 +69,19 @@ static_resources:
                     socket_address:
                       address: host.docker.internal
                       port_value: 9092
+  http_filters:
+    - name: envoy.filters.http.ext_authz
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+        transport_api_version: V3
+        grpc_service:
+          envoy_grpc:
+            cluster_name: auth   # 🔑 All requests first go here for validation
+          timeout: 0.5s
+    - name: envoy.filters.http.router
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
 
 admin:
   address:

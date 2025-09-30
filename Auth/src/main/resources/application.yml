@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: Auth
+  grpc:
+    server:
+      port: 9091
+      max-inbound-message-size: 10485760
+server:
+  port: 8081

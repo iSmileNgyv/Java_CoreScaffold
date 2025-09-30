@@ -1,3 +1,2 @@
 rootProject.name = 'CoreScaffold'
 include 'Auth'
-include 'GrpcGateway'

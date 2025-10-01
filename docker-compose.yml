@@ -10,3 +10,19 @@ services:
     command: /usr/local/bin/envoy -c /etc/envoy/envoy.yaml -l info
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  postgres:
+    image: postgres:15
+    container_name: auth-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_password
+      POSTGRES_DB: auth_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - auth_pg_data:/var/lib/postgresql/data
+
+volumes:
+  auth_pg_data:

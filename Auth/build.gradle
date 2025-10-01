@@ -47,9 +47,11 @@ dependencies {
 	implementation 'io.envoyproxy.controlplane:api:1.0.45'
 	implementation 'io.grpc:grpc-services:1.60.0'
 	implementation 'com.google.api.grpc:proto-google-common-protos:2.29.0'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	runtimeOnly 'org.postgresql:postgresql'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 dependencyManagement {

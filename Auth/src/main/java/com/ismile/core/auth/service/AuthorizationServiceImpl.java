@@ -4,7 +4,6 @@ import io.envoyproxy.envoy.service.auth.v3.AuthorizationGrpc;
 import io.envoyproxy.envoy.service.auth.v3.CheckRequest;
 import io.envoyproxy.envoy.service.auth.v3.CheckResponse;
 import io.envoyproxy.envoy.service.auth.v3.OkHttpResponse;
-import io.envoyproxy.envoy.service.auth.v3.DeniedHttpResponse;
 import com.google.rpc.Status;
 import com.google.rpc.Code;
 import io.grpc.stub.StreamObserver;
@@ -25,7 +24,7 @@ public class AuthorizationServiceImpl extends AuthorizationGrpc.AuthorizationImp
             System.out.println("Auth header: " + authHeader);
 
             // Token yoxlaması
-            if (authHeader.isEmpty() || !authHeader.startsWith("Bearer ")) {
+            if (!authHeader.startsWith("Bearer ")) {
                 System.out.println("❌ DENIED - Unauthenticated");
                 responseObserver.onError(io.grpc.Status.UNAUTHENTICATED.withDescription("Unauthenticated").asRuntimeException());
                 return;

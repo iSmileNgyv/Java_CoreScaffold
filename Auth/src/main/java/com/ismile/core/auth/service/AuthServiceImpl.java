@@ -4,6 +4,7 @@ import auth.*;
 import com.ismile.core.auth.util.GrpcContextUtil;
 import io.grpc.Context;
 import io.grpc.Metadata;
+import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,14 +40,9 @@ public class AuthServiceImpl extends AuthServiceGrpc.AuthServiceImplBase {
 
         } catch (com.ismile.core.auth.exception.SecurityException e) {
             log.warn("Registration failed: {}", e.getMessage());
-
-            AuthResponse errorResponse = AuthResponse.newBuilder()
-                    .setSuccess(false)
-                    .setMessage(e.getMessage())
-                    .build();
-
-            responseObserver.onNext(errorResponse);
-            responseObserver.onCompleted();
+            responseObserver.onError(Status.INVALID_ARGUMENT
+                    .withDescription(e.getMessage())
+                    .asRuntimeException());
         } catch (Exception e) {
             log.error("Registration error: ", e);
             responseObserver.onError(io.grpc.Status.INTERNAL

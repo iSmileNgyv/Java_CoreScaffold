@@ -1,16 +1,21 @@
 package com.ismile.core.auth.service;
 
+import com.google.rpc.Code;
+import com.google.rpc.Status;
+import com.ismile.core.auth.util.JwtUtil;
 import io.envoyproxy.envoy.service.auth.v3.AuthorizationGrpc;
 import io.envoyproxy.envoy.service.auth.v3.CheckRequest;
 import io.envoyproxy.envoy.service.auth.v3.CheckResponse;
 import io.envoyproxy.envoy.service.auth.v3.OkHttpResponse;
-import com.google.rpc.Status;
-import com.google.rpc.Code;
 import io.grpc.stub.StreamObserver;
+import lombok.RequiredArgsConstructor;
 import org.springframework.grpc.server.service.GrpcService;
 
 @GrpcService
+@RequiredArgsConstructor
 public class AuthorizationServiceImpl extends AuthorizationGrpc.AuthorizationImplBase {
+
+    private final JwtUtil jwtUtil;
 
     @Override
     public void check(CheckRequest request, StreamObserver<CheckResponse> responseObserver) {
@@ -23,15 +28,33 @@ public class AuthorizationServiceImpl extends AuthorizationGrpc.AuthorizationImp
             System.out.println("Path: " + path);
             System.out.println("Auth header: " + authHeader);
 
-            // Token yoxlaması
+            // Check token
             if (!authHeader.startsWith("Bearer ")) {
-                System.out.println("❌ DENIED - Unauthenticated");
-                responseObserver.onError(io.grpc.Status.UNAUTHENTICATED.withDescription("Unauthenticated").asRuntimeException());
+                System.out.println("❌ DENIED - No Bearer token");
+                responseObserver.onError(
+                        io.grpc.Status.UNAUTHENTICATED
+                                .withDescription("Missing or invalid Authorization header")
+                                .asRuntimeException()
+                );
                 return;
             }
 
-            // Token validdir
-            System.out.println("✅ ALLOWED");
+            String token = authHeader.substring(7).trim();
+
+            // JWT validation
+            if (!jwtUtil.validateToken(token)) {
+                System.out.println("❌ DENIED - Invalid token");
+                responseObserver.onError(
+                        io.grpc.Status.UNAUTHENTICATED
+                                .withDescription("Invalid or expired token")
+                                .asRuntimeException()
+                );
+                return;
+            }
+
+            // Token valid
+            String username = jwtUtil.extractUsername(token);
+            System.out.println("✅ ALLOWED - User: " + username);
 
             CheckResponse response = CheckResponse.newBuilder()
                     .setStatus(Status.newBuilder()
@@ -47,7 +70,6 @@ public class AuthorizationServiceImpl extends AuthorizationGrpc.AuthorizationImp
             System.err.println("❌ EXCEPTION: " + e.getMessage());
             e.printStackTrace();
 
-            // Exception halında onError göndər
             responseObserver.onError(
                     io.grpc.Status.INTERNAL
                             .withDescription("Internal error: " + e.getMessage())

@@ -30,7 +30,8 @@ public class GrpcAuthInterceptor implements ServerInterceptor {
     private static final List<String> PUBLIC_ENDPOINTS = Arrays.asList(
             "auth.AuthService/Login",
             "auth.AuthService/Register",
-            "auth.AuthService/RefreshToken"
+            "auth.AuthService/RefreshToken",
+            "envoy.service.auth.v3.Authorization/Check"
     );
 
     @Override
@@ -52,7 +53,6 @@ public class GrpcAuthInterceptor implements ServerInterceptor {
 
         // Extract authorization header
         String authHeader = headers.get(Metadata.Key.of("authorization", Metadata.ASCII_STRING_MARSHALLER));
-
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             log.warn("Missing or invalid authorization header for: {}", methodName);
 

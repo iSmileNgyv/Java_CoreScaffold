@@ -10,7 +10,16 @@ allprojects {
         mavenCentral()
     }
 }
-
+java {
+    // --- FIX STARTS HERE ---
+    // This tells Gradle to find a JDK version 21 on your machine
+    // and use it for compiling and running the project,
+    // regardless of what Java version Gradle itself is running on.
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+    // --- FIX ENDS HERE ---
+}
 subprojects {
     apply plugin: 'java'
     apply plugin: 'application'

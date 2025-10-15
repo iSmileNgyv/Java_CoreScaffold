@@ -1,0 +1,29 @@
+# This configuration file is ONLY used for running tests.
+
+spring:
+  # Use an in-memory database for simple context tests
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: password
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+
+grpc:
+  server:
+    # Setting port to 0 tells Spring Boot to start on a random, available port.
+    # This prevents BindException during tests.
+    port: 0
+
+# FIX: Added JWT configuration required by JwtConfig bean.
+# The Spring Context cannot start without these properties.
+# We use a simple, non-production secret for tests.
+jwt:
+  secret: a-very-long-and-secure-secret-key-for-testing-purposes-only
+  expiration: 3600000 # 1 hour for tests
+  refresh-expiration: 86400000 # 1 day for tests
+  issuer: test-auth-service
+

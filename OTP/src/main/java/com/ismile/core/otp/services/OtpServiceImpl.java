@@ -1,6 +1,10 @@
 package com.ismile.core.otp.services;
 
+import com.ismile.core.otp.entity.DeliveryMethod;
+import com.ismile.core.otp.entity.UserSettingsEntity;
+import com.ismile.core.otp.repository.UserSettingsRepository;
 import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,19 +22,20 @@ import java.util.concurrent.TimeUnit;
 public class OtpServiceImpl extends OtpServiceGrpc.OtpServiceImplBase {
 
     private final StringRedisTemplate redisTemplate;
+    private final UserSettingsRepository userSettingsRepository;
 
     private static final int OTP_LENGTH = 6; // Length of the OTP code
     private static final long OTP_TTL_MINUTES = 5; // Time-to-live for the OTP in minutes
 
     /**
      * Handles the SendCode RPC call.
-     * Generates a numeric OTP, stores it in Redis with a TTL, and returns a success response.
+     * It fetches the user's delivery preference, generates a numeric OTP, stores it in Redis,
+     * and then prepares the data for the notification service.
      */
     @Override
     public void sendCode(SendCodeRequest request, StreamObserver<SendCodeResponse> responseObserver) {
-        request.getDestination();
-        if (request.getDestination().trim().isEmpty()) {
-            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Destination cannot be empty.").asRuntimeException());
+        if (request.getUserId() <= 0) {
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("User ID must be a positive integer.").asRuntimeException());
             return;
         }
 
@@ -40,48 +45,68 @@ public class OtpServiceImpl extends OtpServiceGrpc.OtpServiceImplBase {
         }
 
         try {
-            // Generate a random 6-digit numeric code
-            String code = RandomStringUtils.randomNumeric(OTP_LENGTH);
-            String redisKey = buildRedisKey(request.getDestination(), request.getType());
+            // Step 1: Fetch user's delivery settings from the database
+            UserSettingsEntity settings = userSettingsRepository.findByUserId(request.getUserId())
+                    .orElseThrow(() -> Status.NOT_FOUND
+                            .withDescription("User settings not found. Cannot determine delivery method.")
+                            .asRuntimeException());
 
-            // Store the code in Redis with a 5-minute expiration
+            DeliveryMethod deliveryMethod = settings.getDeliveryMethod();
+
+            // Step 2: Generate a random 6-digit numeric code
+            String code = RandomStringUtils.randomNumeric(OTP_LENGTH);
+            String redisKey = buildRedisKey(request.getUserId(), request.getType());
+
+            // Step 3: Store the code in Redis with a 5-minute expiration
             redisTemplate.opsForValue().set(redisKey, code, OTP_TTL_MINUTES, TimeUnit.MINUTES);
 
-            // In a real application, you would integrate an SMS/Email gateway here.
-            // For now, we log the code for testing purposes.
-            log.info("Generated OTP for [{}]. Type: [{}], Code: [{}], Key: [{}]",
-                    request.getDestination(), request.getType(), code, redisKey);
+            log.info("Generated OTP for User ID [{}]. Type: [{}], Code: [{}], Delivery: [{}], Key: [{}]",
+                    request.getUserId(), request.getType(), code, deliveryMethod.name(), redisKey);
+
+
+            // Step 4: Send a message to Kafka for the Notification service to handle.
+            // This decouples the OTP generation from the actual sending (email, sms, etc).
+            // The message would contain: userId, code, deliveryMethod, otpType.
+            //
+            // Example Kafka Producer call (logic to be implemented in a separate Kafka producer class):
+            // kafkaProducer.sendOtpNotification(request.getUserId(), code, deliveryMethod, request.getType());
+            //
+            log.info("Placeholder: A message should be sent to Kafka topic 'otp_notifications' here.");
+
 
             String requestId = UUID.randomUUID().toString();
             SendCodeResponse response = SendCodeResponse.newBuilder()
                     .setSuccess(true)
-                    .setMessage("OTP code has been sent successfully.")
+                    .setMessage("OTP generation request accepted. Notification will be sent via " + deliveryMethod.name())
                     .setRequestId(requestId)
+                    .setDeliveryMethod(deliveryMethod.name())
                     .build();
 
             responseObserver.onNext(response);
             responseObserver.onCompleted();
 
+        } catch (StatusRuntimeException e) {
+            log.error("gRPC Error sending OTP for User ID [{}]: {}", request.getUserId(), e.getStatus().getDescription());
+            responseObserver.onError(e);
         } catch (Exception e) {
-            log.error("Error sending OTP for destination [{}]: {}", request.getDestination(), e.getMessage());
-            responseObserver.onError(Status.INTERNAL.withDescription("Failed to send OTP code.").asRuntimeException());
+            log.error("Internal Error sending OTP for User ID [{}]: {}", request.getUserId(), e.getMessage());
+            responseObserver.onError(Status.INTERNAL.withDescription("Failed to process OTP request.").withCause(e).asRuntimeException());
         }
     }
 
     /**
      * Handles the VerifyCode RPC call.
-     * Checks the provided code against the one stored in Redis.
+     * Checks the provided code against the one stored in Redis for the given user ID.
      */
     @Override
     public void verifyCode(VerifyCodeRequest request, StreamObserver<VerifyCodeResponse> responseObserver) {
-        request.getDestination();
-        if (request.getDestination().trim().isEmpty() || request.getCode().trim().isEmpty()) {
-            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Destination and code cannot be empty.").asRuntimeException());
+        if (request.getUserId() <= 0 || request.getCode().trim().isEmpty()) {
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("User ID and code cannot be empty.").asRuntimeException());
             return;
         }
 
         try {
-            String redisKey = buildRedisKey(request.getDestination(), request.getType());
+            String redisKey = buildRedisKey(request.getUserId(), request.getType());
             String storedCode = redisTemplate.opsForValue().get(redisKey);
 
             VerifyCodeResponse.Builder responseBuilder = VerifyCodeResponse.newBuilder();
@@ -89,30 +114,33 @@ public class OtpServiceImpl extends OtpServiceGrpc.OtpServiceImplBase {
             if (storedCode != null && storedCode.equals(request.getCode())) {
                 // Successful verification, delete the key to prevent reuse
                 redisTemplate.delete(redisKey);
-                log.info("OTP verification successful for destination: {}", request.getDestination());
+                log.info("OTP verification successful for User ID: {}", request.getUserId());
                 responseBuilder.setSuccess(true).setMessage("OTP verified successfully.");
             } else {
                 // Code is incorrect or expired
-                log.warn("OTP verification failed for destination: {}. Provided code: [{}], Stored code: [{}]",
-                        request.getDestination(), request.getCode(), storedCode);
-                responseBuilder.setSuccess(false).setMessage("Invalid or expired OTP code.");
+                log.warn("OTP verification failed for User ID: {}. Provided code: [{}], Stored code: [{}]",
+                        request.getUserId(), request.getCode(), storedCode);
+                //responseBuilder.setSuccess(false).setMessage("Invalid or expired OTP code.");
+                responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Invalid or expired otp code").asRuntimeException());
+                return;
             }
 
             responseObserver.onNext(responseBuilder.build());
             responseObserver.onCompleted();
 
         } catch (Exception e) {
-            log.error("Error verifying OTP for destination [{}]: {}", request.getDestination(), e.getMessage());
+            log.error("Error verifying OTP for User ID [{}]: {}", request.getUserId(), e.getMessage());
             responseObserver.onError(Status.INTERNAL.withDescription("Failed to verify OTP code.").asRuntimeException());
         }
     }
 
     /**
      * Helper method to create a consistent Redis key.
-     * Format: "otp:{TYPE}:{DESTINATION}"
-     * Example: "otp:REGISTRATION:+994501234567"
+     * Format: "otp:{TYPE}:{USER_ID}"
+     * Example: "otp:LOGIN:123"
      */
-    private String buildRedisKey(String destination, OtpType type) {
-        return String.format("otp:%s:%s", type.name(), destination);
+    private String buildRedisKey(int userId, OtpType type) {
+        return String.format("otp:%s:%d", type.name(), userId);
     }
 }
+

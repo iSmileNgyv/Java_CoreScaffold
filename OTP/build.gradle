@@ -43,6 +43,11 @@ dependencies {
     implementation "com.google.protobuf:protobuf-java-util:${protobufVersion}"
     implementation 'io.grpc:grpc-services'
 
+    // Database
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    runtimeOnly 'org.postgresql:postgresql'
+
+
     // Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 

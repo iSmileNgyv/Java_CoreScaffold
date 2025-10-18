@@ -9,9 +9,21 @@ spring:
     redis:
       host: localhost # Use host.docker.internal if running inside a container
       port: 6379
+  # Database configuration
+  datasource:
+    url: jdbc:postgresql://localhost:5434/otp_db
+    username: otp_user
+    password: otp_password
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update # Automatically creates/updates the table schema
+    show-sql: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
 
 # Logging configuration
 logging:
   level:
     com.ismile.core.otp: DEBUG
     org.springframework.data.redis: INFO
+    org.hibernate.SQL: DEBUG

@@ -11,7 +11,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-  postgres:
+  auth-postgres:
     image: postgres:15
     container_name: auth-postgres
     restart: always
@@ -33,6 +33,20 @@ services:
     volumes:
       - auth_redis_data:/data
 
+  otp-postgres:
+    image: postgres:15
+    container_name: otp-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: otp_user
+      POSTGRES_PASSWORD: otp_password
+      POSTGRES_DB: otp_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - otp_pg_data:/var/lib/postgresql/data
+
 volumes:
   auth_pg_data:
   auth_redis_data:
+  otp_pg_data:

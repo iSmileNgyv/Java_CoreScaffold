@@ -33,7 +33,7 @@ ext {
 }
 
 dependencies {
-    implementation 'io.grpc:grpc-services'
+    // Spring Boot and gRPC
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.grpc:spring-grpc-spring-boot-starter'
     implementation "io.grpc:grpc-netty:${grpcVersion}"
@@ -41,9 +41,18 @@ dependencies {
     implementation "io.grpc:grpc-stub:${grpcVersion}"
     implementation "com.google.protobuf:protobuf-java:${protobufVersion}"
     implementation "com.google.protobuf:protobuf-java-util:${protobufVersion}"
+    implementation 'io.grpc:grpc-services'
+
+    // Redis
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // Utility
+    implementation 'org.apache.commons:commons-lang3:3.12.0' // For random string generation
     implementation 'javax.annotation:javax.annotation-api:1.3.2'
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
+
+    // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.grpc:spring-grpc-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -57,11 +66,11 @@ dependencyManagement {
 
 protobuf {
     protoc {
-        artifact = 'com.google.protobuf:protoc:3.25.1' // Or the latest stable version
+        artifact = "com.google.protobuf:protoc:${protobufVersion}"
     }
     plugins {
         grpc {
-            artifact = 'io.grpc:protoc-gen-grpc-java:1.60.0' // Or the latest stable version
+            artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}"
         }
     }
     generateProtoTasks {

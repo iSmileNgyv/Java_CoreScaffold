@@ -2,14 +2,53 @@ syntax = "proto3";
 
 package otp;
 
+option java_multiple_files = true;
+option java_outer_classname = "OtpProto";
+
 service OtpService {
-  rpc SendCode (OtpRequest) returns (OtpReply);
+  // Generates and sends an OTP code to a specified destination.
+  rpc SendCode (SendCodeRequest) returns (SendCodeResponse);
+
+  // Verifies a provided OTP code.
+  rpc VerifyCode (VerifyCodeRequest) returns (VerifyCodeResponse);
 }
 
-message OtpRequest {
-  string name = 1;
+// Enum to define the purpose of the OTP
+enum OtpType {
+  UNKNOWN = 0;
+  REGISTRATION = 1;
+  LOGIN = 2;
+  PASSWORD_RESET = 3;
 }
 
-message OtpReply {
-  string message = 1;
+// Request to send an OTP
+message SendCodeRequest {
+  // The destination for the OTP (e.g., phone number in E.164 format or email address)
+  string destination = 1;
+  // The type/purpose of the OTP
+  OtpType type = 2;
+}
+
+// Response after sending an OTP
+message SendCodeResponse {
+  bool success = 1;
+  string message = 2;
+  // A unique identifier for the OTP attempt, can be used for tracking
+  string request_id = 3;
+}
+
+// Request to verify an OTP
+message VerifyCodeRequest {
+  // The destination where the OTP was sent
+  string destination = 1;
+  // The type/purpose of the OTP
+  OtpType type = 2;
+  // The OTP code entered by the user
+  string code = 3;
+}
+
+// Response after verifying an OTP
+message VerifyCodeResponse {
+  bool success = 1;
+  string message = 2;
 }

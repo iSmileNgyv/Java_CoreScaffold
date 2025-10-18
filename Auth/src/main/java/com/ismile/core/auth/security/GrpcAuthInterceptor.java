@@ -2,6 +2,7 @@ package com.ismile.core.auth.security;
 
 import com.ismile.core.auth.entity.AuditLogEntity;
 import com.ismile.core.auth.repository.AuditLogRepository;
+import com.ismile.core.auth.service.AuthorizationCheckService; // Import the new service
 import io.grpc.*;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
@@ -12,8 +13,8 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * gRPC Interceptor for JWT token validation
- * Intercepts all gRPC calls and validates authorization header
+ * gRPC Interceptor for JWT token validation and role-based authorization.
+ * Intercepts all gRPC calls, validates the authorization header, and checks permissions.
  */
 @Component
 @RequiredArgsConstructor
@@ -22,11 +23,12 @@ public class GrpcAuthInterceptor implements ServerInterceptor {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final AuditLogRepository auditLogRepository;
+    private final AuthorizationCheckService authorizationCheckService; // Inject the new service
 
     // Context key for metadata
     private static final Context.Key<Metadata> METADATA_KEY = Context.key("metadata");
 
-    // Public endpoints that don't require authentication
+    // Public endpoints that don't require authentication or authorization
     private static final List<String> PUBLIC_ENDPOINTS = Arrays.asList(
             "auth.AuthService/Login",
             "auth.AuthService/Register",
@@ -51,22 +53,16 @@ public class GrpcAuthInterceptor implements ServerInterceptor {
             return Contexts.interceptCall(context, call, headers, next);
         }
 
+        // --- 1. AUTHENTICATION ---
         // Extract authorization header
         String authHeader = headers.get(Metadata.Key.of("authorization", Metadata.ASCII_STRING_MARSHALLER));
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             log.warn("Missing or invalid authorization header for: {}", methodName);
-
-            // Log unauthorized attempt
             logUnauthorizedAccess(methodName, "Missing authorization header");
-
-            call.close(
-                    Status.UNAUTHENTICATED.withDescription("Missing or invalid authorization header"),
-                    new Metadata()
-            );
+            call.close(Status.UNAUTHENTICATED.withDescription("Missing or invalid authorization header"), new Metadata());
             return new ServerCall.Listener<ReqT>() {};
         }
 
-        // Extract token
         String token = authHeader.substring(7);
 
         try {
@@ -81,49 +77,40 @@ public class GrpcAuthInterceptor implements ServerInterceptor {
 
             log.debug("Authenticated user: {} (ID: {}) with roles: {}", username, userId, roles);
 
+            // --- 2. AUTHORIZATION ---
+            // Check if the user's roles grant permission for the requested method
+            if (!authorizationCheckService.hasPermission(roles, methodName)) {
+                log.warn("Authorization failed for user {} with roles {} on method {}", username, roles, methodName);
+                logUnauthorizedAccess(methodName, "Insufficient permissions");
+                call.close(Status.PERMISSION_DENIED.withDescription("You do not have permission to perform this action"), new Metadata());
+                return new ServerCall.Listener<ReqT>() {};
+            }
+
+            log.info("Authorization successful for user {} on method {}", username, methodName);
+
+            // --- 3. FORWARD REQUEST ---
             // Add user context to metadata for downstream use
             Metadata newHeaders = new Metadata();
             newHeaders.merge(headers);
-            newHeaders.put(
-                    Metadata.Key.of("user-id", Metadata.ASCII_STRING_MARSHALLER),
-                    String.valueOf(userId)
-            );
-            newHeaders.put(
-                    Metadata.Key.of("username", Metadata.ASCII_STRING_MARSHALLER),
-                    username
-            );
+            newHeaders.put(Metadata.Key.of("user-id", Metadata.ASCII_STRING_MARSHALLER), String.valueOf(userId));
+            newHeaders.put(Metadata.Key.of("username", Metadata.ASCII_STRING_MARSHALLER), username);
 
-            // Create context with both metadata and user info
-            Context newContext = context
-                    .withValue(METADATA_KEY, newHeaders);
+            Context newContext = context.withValue(METADATA_KEY, newHeaders);
 
             return Contexts.interceptCall(newContext, call, newHeaders, next);
 
         } catch (com.ismile.core.auth.exception.SecurityException e) {
             log.warn("Token validation failed for {}: {}", methodName, e.getMessage());
-
-            // Log failed validation
             logUnauthorizedAccess(methodName, e.getMessage());
-
-            call.close(
-                    Status.UNAUTHENTICATED.withDescription("Invalid or expired token: " + e.getMessage()),
-                    new Metadata()
-            );
+            call.close(Status.UNAUTHENTICATED.withDescription("Invalid or expired token: " + e.getMessage()), new Metadata());
             return new ServerCall.Listener<ReqT>() {};
         } catch (Exception e) {
-            log.error("Unexpected error during authentication for {}: {}", methodName, e.getMessage());
-
-            call.close(
-                    Status.INTERNAL.withDescription("Authentication error"),
-                    new Metadata()
-            );
+            log.error("Unexpected error during authentication/authorization for {}: {}", methodName, e.getMessage(), e);
+            call.close(Status.INTERNAL.withDescription("Internal server error"), new Metadata());
             return new ServerCall.Listener<ReqT>() {};
         }
     }
 
-    /**
-     * Log unauthorized access attempt
-     */
     private void logUnauthorizedAccess(String endpoint, String reason) {
         try {
             AuditLogEntity auditLog = AuditLogEntity.builder()
@@ -131,7 +118,6 @@ public class GrpcAuthInterceptor implements ServerInterceptor {
                     .details("Endpoint: " + endpoint + ", Reason: " + reason)
                     .success(false)
                     .build();
-
             auditLogRepository.save(auditLog);
         } catch (Exception e) {
             log.error("Failed to log unauthorized access: {}", e.getMessage());

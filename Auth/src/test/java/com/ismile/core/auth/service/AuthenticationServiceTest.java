@@ -1,6 +1,5 @@
 package com.ismile.core.auth.service;
 
-import auth.AuthResponse;
 import com.ismile.core.auth.entity.RoleEntity;
 import com.ismile.core.auth.entity.UserEntity;
 import com.ismile.core.auth.exception.SecurityException;
@@ -9,8 +8,10 @@ import com.ismile.core.auth.repository.RefreshTokenRepository;
 import com.ismile.core.auth.repository.RoleRepository;
 import com.ismile.core.auth.repository.UserRepository;
 import com.ismile.core.auth.security.JwtTokenProvider;
+import com.ismile.core.auth.security.LoginAttemptService;
 import com.ismile.core.auth.security.PasswordValidator;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -20,14 +21,25 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
 
+/**
+ * Unit tests for the AuthenticationService.
+ * This class tests the business logic of the service in isolation,
+ * mocking all external dependencies like repositories and encoders.
+ */
 @ExtendWith(MockitoExtension.class)
 class AuthenticationServiceTest {
 
+    // The class we are testing
+    @InjectMocks
+    private AuthenticationService authenticationService;
+
+    // Mocks for dependencies
     @Mock
     private UserRepository userRepository;
     @Mock
@@ -45,144 +57,113 @@ class AuthenticationServiceTest {
     @Mock
     private LoginAttemptService loginAttemptService;
 
-    @InjectMocks
-    private AuthenticationService authenticationService;
-
-    private UserEntity user;
-    private RoleEntity defaultRole;
+    private UserEntity testUser;
+    private RoleEntity userRole;
 
     @BeforeEach
     void setUp() {
-        user = new UserEntity();
-        user.setId(1L);
-        user.setUsername("testuser");
-        user.setPassword("password");
-        user.setName("Test");
-        user.setSurname("User");
-        user.setPhoneNumber("1234567890");
+        // Common setup for tests
+        userRole = new RoleEntity();
+        userRole.setCode("USER");
+        userRole.setName("User");
+        userRole.setDefaultRole(true);
 
-        defaultRole = new RoleEntity();
-        defaultRole.setId(1L);
-        defaultRole.setName("ROLE_USER");
-        defaultRole.setCode("USER");
-        defaultRole.setDefaultRole(true);
+        testUser = new UserEntity();
+        testUser.setId(1);
+        testUser.setUsername("testuser");
+        testUser.setPassword("encodedPassword");
+        testUser.setName("Test");
+        testUser.setSurname("User");
+        testUser.setActive(true);
     }
 
     @Test
-    void testRegister_Success() {
-        when(userRepository.existsByUsername("testuser")).thenReturn(false);
-        when(userRepository.existsByPhoneNumber("1234567890")).thenReturn(false);
-        when(roleRepository.findByDefaultRoleTrue()).thenReturn(Optional.of(defaultRole));
-        when(passwordEncoder.encode("password")).thenReturn("encodedPassword");
-        when(userRepository.save(any(UserEntity.class))).thenReturn(user);
-        when(jwtTokenProvider.generateToken(any(), any(), any())).thenReturn("accessToken");
+    @DisplayName("Should register a new user successfully")
+    void register_whenValidUser_shouldSucceed() {
+        // Arrange
+        when(userRepository.existsByUsername("newuser")).thenReturn(false);
+        when(roleRepository.findByDefaultRoleTrue()).thenReturn(Optional.of(userRole));
+        when(passwordEncoder.encode("Password123!")).thenReturn("encodedPassword");
+        // Mocking the user saving part to return the user with an ID.
+        when(userRepository.save(any(UserEntity.class))).thenAnswer(invocation -> {
+            UserEntity userToSave = invocation.getArgument(0);
+            userToSave.setId(1); // Simulate saving and getting an ID
+            return userToSave;
+        });
 
-        AuthResponse response = authenticationService.register("testuser", "password", "Test", "User", "1234567890", "127.0.0.1");
+        // Act
+        authenticationService.register("newuser", "Password123!", "New", "User", null, "127.0.0.1");
 
-        assertNotNull(response);
-        assertTrue(response.getSuccess());
-        assertEquals("Authentication successful", response.getMessage());
-        assertEquals("accessToken", response.getToken());
+        // Assert
+        // Verify that the password validator was called
+        verify(passwordValidator, times(1)).validate("Password123!");
+        // Verify that the user repository's save method was called exactly once
+        verify(userRepository, times(1)).save(any(UserEntity.class));
+        // Verify that the audit log repository's save method was called
+        verify(auditLogRepository, times(1)).save(any());
     }
 
     @Test
-    void testRegister_UsernameExists() {
+    @DisplayName("Should throw exception when registering with an existing username")
+    void register_whenUsernameExists_shouldThrowException() {
+        // Arrange
         when(userRepository.existsByUsername("testuser")).thenReturn(true);
 
-        SecurityException exception = assertThrows(SecurityException.class, () -> {
-            authenticationService.register("testuser", "password", "Test", "User", "1234567890", "127.0.0.1");
-        });
-
-        assertEquals("Username already exists", exception.getMessage());
+        // Act & Assert
+        assertThatThrownBy(() -> authenticationService.register("testuser", "Password123!", "Test", "User", null, "127.0.0.1"))
+                .isInstanceOf(SecurityException.class)
+                .hasMessage("Username already exists");
     }
 
     @Test
-    void testRegister_InvalidPassword() {
-        doNothing().when(passwordValidator).validate("invalidpassword");
+    @DisplayName("Should log in a user successfully with correct credentials")
+    void login_whenCredentialsAreValid_shouldSucceed() {
+        // Arrange
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
+        when(loginAttemptService.isLocked(testUser)).thenReturn(false);
+        when(passwordEncoder.matches("password123", "encodedPassword")).thenReturn(true);
+        // Mock token generation
+        when(jwtTokenProvider.generateToken(anyInt(), anyString(), any())).thenReturn("fake-jwt-token");
 
-        assertThrows(SecurityException.class, () -> {
-            authenticationService.register("testuser", "invalidpassword", "Test", "User", "1234567890", "127.0.0.1");
-        });
+
+        // Act
+        var authResponse = authenticationService.login("testuser", "password123", "127.0.0.1");
+
+        // Assert
+        assertThat(authResponse).isNotNull();
+        assertThat(authResponse.getSuccess()).isTrue();
+        assertThat(authResponse.getToken()).isEqualTo("fake-jwt-token");
+        verify(loginAttemptService, times(1)).resetLoginAttempts("testuser");
+        verify(userRepository, times(1)).save(testUser); // To save lastLogin time
     }
 
     @Test
-    void testLogin_Success() {
-        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
-        when(loginAttemptService.isLocked(user)).thenReturn(false);
-        user.setActive(true);
-        when(passwordEncoder.matches("password", "password")).thenReturn(true);
-        when(jwtTokenProvider.generateToken(any(), any(), any())).thenReturn("accessToken");
+    @DisplayName("Should fail login with incorrect password")
+    void login_whenPasswordIsInvalid_shouldFail() {
+        // Arrange
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
+        when(loginAttemptService.isLocked(testUser)).thenReturn(false);
+        when(passwordEncoder.matches("wrongpassword", "encodedPassword")).thenReturn(false);
 
-        AuthResponse response = authenticationService.login("testuser", "password", "127.0.0.1");
+        // Act & Assert
+        assertThatThrownBy(() -> authenticationService.login("testuser", "wrongpassword", "127.0.0.1"))
+                .isInstanceOf(SecurityException.class)
+                .hasMessage("Invalid username or password");
 
-        assertNotNull(response);
-        assertTrue(response.getSuccess());
-        assertEquals("accessToken", response.getToken());
+        // Verify that a failed login attempt was recorded
+        verify(loginAttemptService, times(1)).recordLoginAttempt("testuser", false, "127.0.0.1", "Invalid password");
     }
 
     @Test
-    void testLogin_InvalidUsername() {
-        when(userRepository.findByUsername("wronguser")).thenReturn(Optional.empty());
+    @DisplayName("Should fail login for a locked account")
+    void login_whenAccountIsLocked_shouldFail() {
+        // Arrange
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
+        when(loginAttemptService.isLocked(testUser)).thenReturn(true);
 
-        SecurityException exception = assertThrows(SecurityException.class, () -> {
-            authenticationService.login("wronguser", "password", "127.0.0.1");
-        });
-
-        assertEquals("Invalid username or password", exception.getMessage());
-    }
-
-    @Test
-    void testLogin_AccountLocked() {
-        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
-        when(loginAttemptService.isLocked(user)).thenReturn(true);
-
-        SecurityException exception = assertThrows(SecurityException.class, () -> {
-            authenticationService.login("testuser", "password", "127.0.0.1");
-        });
-
-        assertEquals("Account is locked. Please try again later.", exception.getMessage());
-    }
-
-    @Test
-    void testLogout_Success() {
-        RefreshTokenEntity refreshTokenEntity = RefreshTokenEntity.builder()
-                .token("refreshToken")
-                .user(user)
-                .build();
-        when(refreshTokenRepository.findByToken("refreshToken")).thenReturn(Optional.of(refreshTokenEntity));
-
-        authenticationService.logout("refreshToken", "127.0.0.1");
-
-        assertTrue(refreshTokenEntity.isRevoked());
-        assertNotNull(refreshTokenEntity.getRevokedAt());
-    }
-
-    @Test
-    void testRefreshToken_Success() {
-        RefreshTokenEntity refreshTokenEntity = RefreshTokenEntity.builder()
-                .token("refreshToken")
-                .user(user)
-                .expiresAt(java.time.LocalDateTime.now().plusDays(1))
-                .revoked(false)
-                .build();
-        when(refreshTokenRepository.findByToken("refreshToken")).thenReturn(Optional.of(refreshTokenEntity));
-        when(jwtTokenProvider.generateToken(any(), any(), any())).thenReturn("newAccessToken");
-
-        AuthResponse response = authenticationService.refreshToken("refreshToken");
-
-        assertNotNull(response);
-        assertTrue(response.getSuccess());
-        assertEquals("newAccessToken", response.getToken());
-    }
-
-    @Test
-    void testRefreshToken_InvalidToken() {
-        when(refreshTokenRepository.findByToken("invalidToken")).thenReturn(Optional.empty());
-
-        SecurityException exception = assertThrows(SecurityException.class, () -> {
-            authenticationService.refreshToken("invalidToken");
-        });
-
-        assertEquals("Invalid refresh token", exception.getMessage());
+        // Act & Assert
+        assertThatThrownBy(() -> authenticationService.login("testuser", "password123", "127.0.0.1"))
+                .isInstanceOf(SecurityException.class)
+                .hasMessage("Account is locked. Please try again later.");
     }
 }

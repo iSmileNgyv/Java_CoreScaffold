@@ -4,3 +4,14 @@ spring:
   grpc:
     server:
       port: 9092
+  # Redis configuration
+  data:
+    redis:
+      host: localhost # Use host.docker.internal if running inside a container
+      port: 6379
+
+# Logging configuration
+logging:
+  level:
+    com.ismile.core.otp: DEBUG
+    org.springframework.data.redis: INFO

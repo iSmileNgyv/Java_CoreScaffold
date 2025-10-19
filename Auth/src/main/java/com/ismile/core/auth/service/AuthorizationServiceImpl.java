@@ -38,7 +38,8 @@ public class AuthorizationServiceImpl extends AuthorizationGrpc.AuthorizationImp
             "auth.AuthService/Register",
             "auth.AuthService/RefreshToken",
             "otp.OtpService/SendCode",
-            "otp.OtpService/VerifyCode"
+            "otp.OtpService/VerifyCode",
+            "notification.NotificationGrpcService/SendNotification"
     );
 
     /**

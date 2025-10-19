@@ -7,6 +7,7 @@ import com.ismile.core.notification.repository.UserSettingsRepository;
 import com.ismile.core.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.mail.SimpleMailMessage;
@@ -23,17 +24,35 @@ public class EmailNotificationServiceImpl implements NotificationService<EmailNo
     private final JavaMailSender javaMailSender;
     private final UserSettingsRepository userSettingsRepository;
 
+    @Value("${spring.mail.username}")
+    private String mailFrom;
+
     @Override
     public EmailNotificationResponseDto send(EmailNotificationRequestDto request) {
         var response = new EmailNotificationResponseDto();
-        this.sendEmail(request.getRecipient(), request.getSubject(), request.getMessage());
+        try {
+            this.sendEmail(request.getRecipient(), request.getSubject(), request.getMessage());
+            response.setEmailStatus("SENT");
+        } catch (Exception e) {
+            response.setEmailStatus("FAILED");
+            log.error("Failed to send email via direct send method to: {}", request.getRecipient(), e);
+        }
         return response;
+    }
+
+    /**
+     * Implements the method from the NotificationService interface.
+     * Declares that this service handles EMAIL notifications.
+     */
+    @Override
+    public DeliveryMethod getDeliveryMethod() {
+        return DeliveryMethod.EMAIL;
     }
 
     private void sendEmail(String to, String subject, String text) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom("ismayilnagiyev100@gmail.com"); // This should match the username in application.yml
+            message.setFrom(mailFrom);
             message.setTo(to);
             message.setSubject(subject);
             message.setText(text);
@@ -41,8 +60,8 @@ public class EmailNotificationServiceImpl implements NotificationService<EmailNo
             log.info("Email sent successfully to: {}", to);
         } catch (Exception e) {
             log.error("Failed to send email to: {}. Error: {}", to, e.getMessage());
-            // You might want to re-throw this as a custom exception
-            // depending on your error handling strategy.
+            // Re-throwing as a runtime exception to be handled by the calling gRPC service.
+            throw new RuntimeException("Email sending failed", e);
         }
     }
 

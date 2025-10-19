@@ -1,3 +1,4 @@
 rootProject.name = 'CoreScaffold'
 include 'Auth'
 include 'OTP'
+include 'Notification'

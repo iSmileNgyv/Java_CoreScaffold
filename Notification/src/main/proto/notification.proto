@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package notification;
+
+option java_multiple_files = true;
+option java_outer_classname = "NotificationProto";
+
+// The main service for sending notifications.
+service NotificationGrpcService {
+  // Sends a notification to a user via a specified delivery method.
+  rpc SendNotification (SendNotificationRequest) returns (SendNotificationResponse);
+}
+
+// Enum for delivery methods, must match the Java enum in the entity package.
+enum DeliveryMethod {
+  UNKNOWN = 0;
+  EMAIL = 1;
+  // SMS = 2; // Reserved for future use
+}
+
+// The request message containing the notification details.
+message SendNotificationRequest {
+  // The ID of the user who will receive the notification.
+  int32 user_id = 1;
+
+  // The method by which the notification will be sent (e.g., EMAIL).
+  DeliveryMethod delivery_method = 2;
+
+  // The main content of the message.
+  string message_body = 3;
+
+  // Optional subject line, primarily used for emails.
+  string subject = 4;
+}
+
+// The response message after a notification request is processed.
+message SendNotificationResponse {
+  // Indicates whether the request was successfully accepted for processing.
+  bool success = 1;
+
+  // A descriptive message about the result of the operation.
+  string message = 2;
+
+  // A unique identifier for the request, useful for logging and tracking.
+  string request_id = 3;
+}

@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.grpc.server.service.GrpcService;
 import io.envoyproxy.envoy.type.v3.HttpStatus;
-import io.envoyproxy.envoy.type.v3.StatusCode; // Corrected import
+import io.envoyproxy.envoy.type.v3.StatusCode;
 
 import java.util.List;
 
@@ -27,10 +27,19 @@ import java.util.List;
 @Slf4j
 public class AuthorizationServiceImpl extends AuthorizationGrpc.AuthorizationImplBase {
 
-    // Using the more robust JwtTokenProvider for consistency across the service.
     private final JwtTokenProvider jwtTokenProvider;
-    // Injecting the service that contains the core permission checking logic.
     private final AuthorizationCheckService authorizationCheckService;
+
+    // --- NEW: PUBLIC ENDPOINTS WHITELIST ---
+    // This list contains all operation codes that should bypass JWT authentication.
+    // A user must be able to log in, register, and verify OTP without being already logged in.
+    private static final List<String> PUBLIC_ENDPOINTS = List.of(
+            "auth.AuthService/Login",
+            "auth.AuthService/Register",
+            "auth.AuthService/RefreshToken",
+            "otp.OtpService/SendCode",
+            "otp.OtpService/VerifyCode"
+    );
 
     /**
      * This method is called by Envoy for every incoming request that requires authorization.
@@ -47,7 +56,6 @@ public class AuthorizationServiceImpl extends AuthorizationGrpc.AuthorizationImp
             // Remove the leading slash to match the format stored in the OperationEntity
             String operationCode = fullPath.startsWith("/") ? fullPath.substring(1) : fullPath;
 
-            // Extract the "authorization" header from the request
             String authHeader = request.getAttributes().getRequest().getHttp()
                     .getHeadersOrDefault("authorization", "");
 
@@ -55,8 +63,17 @@ public class AuthorizationServiceImpl extends AuthorizationGrpc.AuthorizationImp
             log.debug("Operation Code (Path): {}", operationCode);
             log.debug("Authorization Header: {}", authHeader);
 
+            // --- 0. PUBLIC ENDPOINT CHECK ---
+            // First, check if the requested operation is on the public whitelist.
+            // If it is, allow the request immediately without any token validation.
+            if (PUBLIC_ENDPOINTS.contains(operationCode)) {
+                log.info("ALLOWED - Public endpoint '{}' accessed. Skipping token validation.", operationCode);
+                allowRequest(responseObserver);
+                return;
+            }
+
             // --- 1. AUTHENTICATION ---
-            // Check if the token exists and has the "Bearer " prefix.
+            // If the endpoint is not public, proceed with token validation.
             if (!authHeader.startsWith("Bearer ")) {
                 log.warn("DENIED - Missing or malformed Bearer token for operation: {}", operationCode);
                 denyRequest(responseObserver, "Authorization header is missing or invalid.");
@@ -115,7 +132,6 @@ public class AuthorizationServiceImpl extends AuthorizationGrpc.AuthorizationImp
                         .setMessage(message)
                         .build())
                 .setDeniedResponse(DeniedHttpResponse.newBuilder()
-                        // Corrected usage of the StatusCode enum
                         .setStatus(HttpStatus.newBuilder().setCode(StatusCode.Forbidden).build())
                         .build())
                 .build();
@@ -123,4 +139,3 @@ public class AuthorizationServiceImpl extends AuthorizationGrpc.AuthorizationImp
         responseObserver.onCompleted();
     }
 }
-

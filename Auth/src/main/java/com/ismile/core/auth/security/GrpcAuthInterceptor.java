@@ -50,11 +50,11 @@ public class GrpcAuthInterceptor implements ServerInterceptor {
         Context context = Context.current().withValue(METADATA_KEY, headers);
 
         // Skip authentication for public endpoints
+        log.info("[GrpcAuthInterceptor] methodName: {}", methodName);
         if (PUBLIC_ENDPOINTS.contains(methodName)) {
             log.debug("Public endpoint accessed: {}", methodName);
             return Contexts.interceptCall(context, call, headers, next);
         }
-
         // --- 1. AUTHENTICATION ---
         // Extract authorization header
         String authHeader = headers.get(Metadata.Key.of("authorization", Metadata.ASCII_STRING_MARSHALLER));
@@ -85,7 +85,8 @@ public class GrpcAuthInterceptor implements ServerInterceptor {
                 log.warn("Authorization failed for user {} with roles {} on method {}", username, roles, methodName);
                 logUnauthorizedAccess(methodName, "Insufficient permissions");
                 call.close(Status.PERMISSION_DENIED.withDescription("You do not have permission to perform this action"), new Metadata());
-                return new ServerCall.Listener<ReqT>() {};
+                return new ServerCall.Listener<>() {
+                };
             }
 
             log.info("Authorization successful for user {} on method {}", username, methodName);
@@ -105,7 +106,8 @@ public class GrpcAuthInterceptor implements ServerInterceptor {
             log.warn("Token validation failed for {}: {}", methodName, e.getMessage());
             logUnauthorizedAccess(methodName, e.getMessage());
             call.close(Status.UNAUTHENTICATED.withDescription("Invalid or expired token: " + e.getMessage()), new Metadata());
-            return new ServerCall.Listener<ReqT>() {};
+            return new ServerCall.Listener<>() {
+            };
         } catch (Exception e) {
             log.error("Unexpected error during authentication/authorization for {}: {}", methodName, e.getMessage(), e);
             call.close(Status.INTERNAL.withDescription("Internal server error"), new Metadata());

@@ -6,10 +6,10 @@ option java_multiple_files = true;
 option java_outer_classname = "OtpProto";
 
 service OtpService {
-  // Generates and sends an OTP code to a specified destination.
+  // Generates and sends an OTP code to a user's preferred delivery method.
   rpc SendCode (SendCodeRequest) returns (SendCodeResponse);
 
-  // Verifies a provided OTP code.
+  // Verifies a provided OTP code for a user.
   rpc VerifyCode (VerifyCodeRequest) returns (VerifyCodeResponse);
 }
 
@@ -23,8 +23,8 @@ enum OtpType {
 
 // Request to send an OTP
 message SendCodeRequest {
-  // The destination for the OTP (e.g., phone number in E.164 format or email address)
-  string destination = 1;
+  // The unique identifier for the user
+  int32 user_id = 1;
   // The type/purpose of the OTP
   OtpType type = 2;
 }
@@ -35,12 +35,14 @@ message SendCodeResponse {
   string message = 2;
   // A unique identifier for the OTP attempt, can be used for tracking
   string request_id = 3;
+  // The delivery method used to send the OTP
+  string delivery_method = 4;
 }
 
 // Request to verify an OTP
 message VerifyCodeRequest {
-  // The destination where the OTP was sent
-  string destination = 1;
+  // The unique identifier for the user
+  int32 user_id = 1;
   // The type/purpose of the OTP
   OtpType type = 2;
   // The OTP code entered by the user

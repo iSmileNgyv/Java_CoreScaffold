@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: Notification
+  grpc:
+    server:
+      port: 9093
+  datasource:
+    url: jdbc:postgresql://localhost:5435/notification_db
+    username: notification_user
+    password: notification_password
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update # Automatically creates/updates the table schema
+    show-sql: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username:
+      ismayilnagiyev100@gmail.com
+    password: yfsk ygkb qlnb hvan
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  # Logging configuration
+logging:
+  level:
+    com.ismile.core.notification: DEBUG
+    org.hibernate.SQL: DEBUG

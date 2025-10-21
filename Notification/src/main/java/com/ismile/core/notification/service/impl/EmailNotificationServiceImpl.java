@@ -44,10 +44,6 @@ public class EmailNotificationServiceImpl implements NotificationService<EmailNo
         return response;
     }
 
-    /**
-     * Implements the method from the NotificationService interface.
-     * Declares that this service handles EMAIL notifications.
-     */
     @Override
     public DeliveryMethod getDeliveryMethod() {
         return DeliveryMethod.EMAIL;
@@ -64,81 +60,53 @@ public class EmailNotificationServiceImpl implements NotificationService<EmailNo
             log.info("Email sent successfully to: {}", to);
         } catch (Exception e) {
             log.error("Failed to send email to: {}. Error: {}", to, e.getMessage());
-            // Re-throwing as a runtime exception to be handled by the calling gRPC service.
             throw new RuntimeException("Email sending failed", e);
         }
     }
 
     /**
-     * Listens for OTP messages from the 'otp_1' Kafka topic.
-     * This method is responsible for processing the message and sending an email.
-     * Acknowledgment is handled carefully to prevent message re-delivery on failure.
-     *
-     * @param message The message consumed from Kafka, as a Map.
-     * @param acknowledgment The acknowledgment object to confirm message processing.
+     * Listens for messages on the 'otp_email' topic.
+     * This listener is now specific to email-based OTPs.
+     * It receives a message body prepared by the OTP service.
      */
-    @KafkaListener(topics = "otp_1", groupId = "notification_group")
-    private void listenForOtpNotification(Map<String, Object> message, Acknowledgment acknowledgment) {
-        log.info("Received OTP notification message from Kafka: {}", message);
+    @KafkaListener(topics = "otp_email", groupId = "notification_group_email")
+    public void listenForOtpEmail(Map<String, Object> message, Acknowledgment acknowledgment) {
+        log.info("Received OTP for EMAIL from Kafka: {}", message);
         try {
-            // Extract data safely from the message map
             int userId = (int) message.get("userId");
-            String deliveryMethodStr = (String) message.get("deliveryMethod");
-            String code = message.get("code").toString();
+            String messageBody = (String) message.get("messageBody");
+            String subject = (String) message.getOrDefault("subject", "Notification");
 
-            // Convert delivery method string to enum
-            DeliveryMethod deliveryMethod = DeliveryMethod.valueOf(deliveryMethodStr);
+            var userSettings = userSettingsRepository.findByUserIdAndDeliveryMethod(userId, DeliveryMethod.EMAIL)
+                    .orElseThrow(() -> new IllegalStateException("User settings for EMAIL not found for user ID: " + userId));
 
-            // Find the user's settings. We only process if delivery method is EMAIL.
-            var userSettingsOpt = userSettingsRepository.findByUserIdAndDeliveryMethod(userId, deliveryMethod);
-
-            if (userSettingsOpt.isEmpty()) {
-                // If user settings are not found or delivery method is not email,
-                // we still acknowledge the message to remove it from the queue.
-                log.warn("User settings not found for userId: {} with delivery method: {}. Discarding message.", userId, deliveryMethod);
-                acknowledgment.acknowledge();
-                return;
-            }
-
-            var user = userSettingsOpt.get();
-
-            EmailNotificationRequestDto request = new EmailNotificationRequestDto();
-            request.setSubject("Your One-Time Password (OTP)");
-            request.setRecipient(user.getRecipient()); // The user's email address
-            request.setMessage("Your verification code is: " + code);
-
-            this.send(request);
+            // Use the recipient and prepared message body directly
+            sendEmail(userSettings.getRecipient(), subject, messageBody);
 
         } catch (Exception ex) {
-            // Log the full exception for debugging purposes.
-            log.error("Error processing OTP notification from Kafka. Message: {}. Error: {}", message, ex.getMessage(), ex);
-            // In case of an error, we still acknowledge the message to avoid an infinite retry loop
-            // for a potentially "poison pill" message. You might want a more sophisticated
-            // dead-letter queue (DLQ) strategy for production.
+            log.error("Error processing OTP email from Kafka. Message: {}. Error: {}", message, ex.getMessage(), ex);
+            // In a production environment, you would have a dead-letter queue (DLQ) strategy here.
         } finally {
-            // Always acknowledge the message to prevent it from being re-processed.
             acknowledgment.acknowledge();
-            log.debug("Kafka message acknowledged.");
+            log.debug("Kafka message acknowledged for topic 'otp_email'.");
         }
     }
 
     @Override
     public void processGrpcRequest(SendNotificationRequest grpcRequest) {
+        // This method remains for direct gRPC calls if needed, but the primary flow is now via Kafka.
         log.info("Processing gRPC request for EMAIL to user_id: {}", grpcRequest.getUserId());
-        // Fetch user settings to get the recipient address (e.g., email)
         UserSettingsEntity userSettings = userSettingsRepository.findByUserIdAndDeliveryMethod(grpcRequest.getUserId(), getDeliveryMethod())
                 .orElseThrow(() -> Status.NOT_FOUND
                         .withDescription("User settings not found for the given user_id and delivery method.")
                         .asRuntimeException());
 
-        // Create the specific DTO for this service
         EmailNotificationRequestDto emailRequest = new EmailNotificationRequestDto();
         emailRequest.setRecipient(userSettings.getRecipient());
         emailRequest.setMessage(grpcRequest.getMessageBody());
         emailRequest.setSubject(grpcRequest.getSubject());
         emailRequest.setRequestId(UUID.randomUUID());
 
-        // Call the send method
         this.send(emailRequest);
     }
 }

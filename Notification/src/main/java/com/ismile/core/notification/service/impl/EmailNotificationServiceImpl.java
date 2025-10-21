@@ -3,10 +3,13 @@ package com.ismile.core.notification.service.impl;
 import com.ismile.core.notification.dto.email.EmailNotificationRequestDto;
 import com.ismile.core.notification.dto.email.EmailNotificationResponseDto;
 import com.ismile.core.notification.entity.DeliveryMethod;
+import com.ismile.core.notification.entity.UserSettingsEntity;
 import com.ismile.core.notification.repository.UserSettingsRepository;
 import com.ismile.core.notification.service.NotificationService;
+import io.grpc.Status;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import notification.SendNotificationRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
@@ -15,6 +18,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -116,5 +120,25 @@ public class EmailNotificationServiceImpl implements NotificationService<EmailNo
             acknowledgment.acknowledge();
             log.debug("Kafka message acknowledged.");
         }
+    }
+
+    @Override
+    public void processGrpcRequest(SendNotificationRequest grpcRequest) {
+        log.info("Processing gRPC request for EMAIL to user_id: {}", grpcRequest.getUserId());
+        // Fetch user settings to get the recipient address (e.g., email)
+        UserSettingsEntity userSettings = userSettingsRepository.findByUserIdAndDeliveryMethod(grpcRequest.getUserId(), getDeliveryMethod())
+                .orElseThrow(() -> Status.NOT_FOUND
+                        .withDescription("User settings not found for the given user_id and delivery method.")
+                        .asRuntimeException());
+
+        // Create the specific DTO for this service
+        EmailNotificationRequestDto emailRequest = new EmailNotificationRequestDto();
+        emailRequest.setRecipient(userSettings.getRecipient());
+        emailRequest.setMessage(grpcRequest.getMessageBody());
+        emailRequest.setSubject(grpcRequest.getSubject());
+        emailRequest.setRequestId(UUID.randomUUID());
+
+        // Call the send method
+        this.send(emailRequest);
     }
 }

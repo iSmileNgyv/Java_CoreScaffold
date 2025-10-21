@@ -86,7 +86,7 @@ static_resources:
                   address:
                     socket_address:
                       address: host.docker.internal
-                      port_value: 9091
+                      port_value: 5051
     - name: auth_authz
       type: STRICT_DNS
       typed_extension_protocol_options:
@@ -103,7 +103,7 @@ static_resources:
                   address:
                     socket_address:
                       address: host.docker.internal
-                      port_value: 9091
+                      port_value: 5051
     - name: otp
       type: STRICT_DNS
       typed_extension_protocol_options:
@@ -120,7 +120,7 @@ static_resources:
                   address:
                     socket_address:
                       address: host.docker.internal
-                      port_value: 9092
+                      port_value: 5052
 
     # --- FIX: Renamed old 'notification' cluster to 'notification_grpc' as requested ---
     - name: notification_grpc
@@ -141,7 +141,7 @@ static_resources:
                     socket_address:
                       address: host.docker.internal
                       # This cluster points to the gRPC port
-                      port_value: 9093
+                      port_value: 5053
 
     # --- FIX: Added a new cluster specifically for WebSocket traffic with '_ws' suffix ---
     - name: notification_ws

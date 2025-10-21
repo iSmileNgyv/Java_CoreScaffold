@@ -6,7 +6,7 @@ spring:
     name: Notification
   grpc:
     server:
-      port: 9093
+      port: 5053
   datasource:
     url: jdbc:postgresql://localhost:5435/notification_db
     username: notification_user
@@ -30,6 +30,17 @@ spring:
           auth: true
           starttls:
             enable: true
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: notification_group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+
   # Logging configuration
 logging:
   level:

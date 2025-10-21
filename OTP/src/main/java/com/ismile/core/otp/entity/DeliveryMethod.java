@@ -5,7 +5,5 @@ package com.ismile.core.otp.entity;
  * This can be extended with more methods like SMS, TELEGRAM etc.
  */
 public enum DeliveryMethod {
-    EMAIL,
-    // SMS,
-    // TELEGRAM
+    EMAIL
 }

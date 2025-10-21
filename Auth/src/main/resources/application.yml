@@ -3,12 +3,8 @@ spring:
     name: Auth
   grpc:
     server:
-      port: 9091
+      port: 5051
       max-inbound-message-size: 10485760
-    client:
-      otp-service:
-        address: static://localhost:9092
-        negotiation-type: plaintext
   datasource:
     url: jdbc:postgresql://localhost:5433/auth_db
     username: auth_user
@@ -32,6 +28,12 @@ jwt:
   expiration: 86400000  # 24 hours in milliseconds
   refresh-expiration: 604800000  # 7 days in milliseconds
   issuer: auth-service
+
+# grpc client settings
+grpc:
+  client:
+    otp-service:
+      address: localhost:5052
 
 # Logging
 logging:

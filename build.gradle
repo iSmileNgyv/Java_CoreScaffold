@@ -10,16 +10,13 @@ allprojects {
         mavenCentral()
     }
 }
+
 java {
-    // --- FIX STARTS HERE ---
-    // This tells Gradle to find a JDK version 21 on your machine
-    // and use it for compiling and running the project,
-    // regardless of what Java version Gradle itself is running on.
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
     }
-    // --- FIX ENDS HERE ---
 }
+
 subprojects {
     apply plugin: 'java'
     apply plugin: 'application'
@@ -29,6 +26,22 @@ subprojects {
         targetCompatibility = JavaVersion.VERSION_21
     }
 
+    // --- FIX STARTS HERE ---
+    // This block forces a consistent version for all gRPC libraries across all sub-modules.
+    // It resolves the "NoSuchMethodError" by preventing mismatched versions of gRPC libraries
+    // from being loaded onto the classpath at runtime.
+    configurations.all {
+        resolutionStrategy {
+            force 'io.grpc:grpc-api:1.60.0'
+            force 'io.grpc:grpc-core:1.60.0'
+            force 'io.grpc:grpc-netty:1.60.0'
+            force 'io.grpc:grpc-protobuf:1.60.0'
+            force 'io.grpc:grpc-stub:1.60.0'
+            force 'io.grpc:grpc-services:1.60.0'
+        }
+    }
+    // --- FIX ENDS HERE ---
+
     dependencies {
         testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
     }
@@ -37,3 +50,4 @@ subprojects {
         useJUnitPlatform()
     }
 }
+

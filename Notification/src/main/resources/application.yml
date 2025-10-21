@@ -1,3 +1,6 @@
+server:
+  port: 8083 # Standard HTTP/WebSocket port
+  address: 0.0.0.0 # Listen on all network interfaces
 spring:
   application:
     name: Notification
@@ -27,9 +30,10 @@ spring:
           auth: true
           starttls:
             enable: true
-
   # Logging configuration
 logging:
   level:
     com.ismile.core.notification: DEBUG
     org.hibernate.SQL: DEBUG
+jwt:
+  secret: ${JWT_SECRET:MyVerySecureSecretKeyForJWT2024WithAtLeast512BitsForHS512Algorithm!ChangeThisInProduction}

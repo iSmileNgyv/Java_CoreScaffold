@@ -1,3 +1,4 @@
+# Final Corrected Envoy configuration with separate clusters for WebSocket and gRPC
 static_resources:
   listeners:
     - name: gateway
@@ -5,7 +6,6 @@ static_resources:
         socket_address:
           address: 0.0.0.0
           port_value: 9090
-
       filter_chains:
         - filters:
             - name: envoy.filters.network.http_connection_manager
@@ -13,35 +13,48 @@ static_resources:
                 "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
                 stat_prefix: grpc
                 codec_type: AUTO
-
                 route_config:
                   name: routes
                   virtual_hosts:
                     - name: services
                       domains: ["*"]
                       routes:
+                        # Route for WebSocket traffic
                         - match:
-                            prefix: "/auth.AuthService/"
+                            prefix: "/ws"
                           route:
-                            cluster: auth
-                            # 🔑 Auth üçün ext_authz disable et
+                            # This now points to the new cluster dedicated to WebSocket traffic
+                            cluster: notification_ws
+                            upgrade_configs:
+                              - upgrade_type: websocket
                           typed_per_filter_config:
                             envoy.filters.http.ext_authz:
                               "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
                               disabled: true
 
+                        # Route for Auth service gRPC traffic
+                        - match:
+                            prefix: "/auth.AuthService/"
+                          route:
+                            cluster: auth
+                          typed_per_filter_config:
+                            envoy.filters.http.ext_authz:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                              disabled: true
+
+                        # Route for OTP service gRPC traffic
                         - match:
                             prefix: "/otp.OtpService/"
                           route:
                             cluster: otp
 
+                        # Route for Notification service gRPC traffic
                         - match:
                             prefix: "/notification.NotificationGrpcService/"
                           route:
-                            cluster: notification
-
+                            # This now points to the new cluster dedicated to gRPC traffic
+                            cluster: notification_grpc
                 http_filters:
-                  # 🔑 ext_authz filter
                   - name: envoy.filters.http.ext_authz
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
@@ -53,11 +66,9 @@ static_resources:
                       failure_mode_allow: false
                       status_on_error:
                         code: 401
-
                   - name: envoy.filters.http.router
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-
   clusters:
     - name: auth
       type: STRICT_DNS
@@ -76,8 +87,6 @@ static_resources:
                     socket_address:
                       address: host.docker.internal
                       port_value: 9091
-
-    # 🔑 Authorization üçün ayrı cluster
     - name: auth_authz
       type: STRICT_DNS
       typed_extension_protocol_options:
@@ -95,7 +104,6 @@ static_resources:
                     socket_address:
                       address: host.docker.internal
                       port_value: 9091
-
     - name: otp
       type: STRICT_DNS
       typed_extension_protocol_options:
@@ -114,26 +122,46 @@ static_resources:
                       address: host.docker.internal
                       port_value: 9092
 
-    - name: notification
+    # --- FIX: Renamed old 'notification' cluster to 'notification_grpc' as requested ---
+    - name: notification_grpc
       type: STRICT_DNS
       typed_extension_protocol_options:
         envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
           "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+          # This cluster only handles HTTP/2, so explicit config is correct here.
           explicit_http_config:
-            http2_protocol_options: { }
+            http2_protocol_options: {}
       dns_lookup_family: V4_ONLY
       load_assignment:
-        cluster_name: notification
+        cluster_name: notification_grpc
         endpoints:
           - lb_endpoints:
               - endpoint:
                   address:
                     socket_address:
                       address: host.docker.internal
+                      # This cluster points to the gRPC port
                       port_value: 9093
+
+    # --- FIX: Added a new cluster specifically for WebSocket traffic with '_ws' suffix ---
+    - name: notification_ws
+      type: STRICT_DNS
+      # This cluster is for standard HTTP/1.1 traffic, so no special http2 options are needed.
+      dns_lookup_family: V4_ONLY
+      load_assignment:
+        cluster_name: notification_ws
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: host.docker.internal
+                      # This cluster points to the new WebSocket/HTTP port
+                      port_value: 8083
 
 admin:
   address:
     socket_address:
       address: 0.0.0.0
       port_value: 9901
+

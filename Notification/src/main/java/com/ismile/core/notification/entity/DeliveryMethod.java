@@ -6,6 +6,5 @@ package com.ismile.core.notification.entity;
  */
 public enum DeliveryMethod {
     EMAIL,
-    // SMS,
-    // TELEGRAM
+    WEBSOCKET
 }

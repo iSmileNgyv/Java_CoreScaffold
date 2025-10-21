@@ -15,7 +15,7 @@ service NotificationGrpcService {
 enum DeliveryMethod {
   UNKNOWN = 0;
   EMAIL = 1;
-  // SMS = 2; // Reserved for future use
+  WEBSOCKET = 2;
 }
 
 // The request message containing the notification details.

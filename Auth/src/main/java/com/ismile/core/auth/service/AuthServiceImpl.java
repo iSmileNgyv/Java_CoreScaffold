@@ -52,7 +52,7 @@ public class AuthServiceImpl extends AuthServiceGrpc.AuthServiceImplBase {
     }
 
     /**
-     * Login user
+     * Login user. This may trigger an OTP flow.
      */
     @Override
     public void login(LoginRequest request, StreamObserver<AuthResponse> responseObserver) {
@@ -85,6 +85,26 @@ public class AuthServiceImpl extends AuthServiceGrpc.AuthServiceImplBase {
                     .asRuntimeException());
         }
     }
+
+    /**
+     * New RPC method to verify OTP and complete the login process.
+     */
+    @Override
+    public void verifyOtpAndLogin(VerifyOtpLoginRequest request, StreamObserver<AuthResponse> responseObserver) {
+        try {
+            String ipAddress = extractIpAddress();
+            AuthResponse response = authenticationService.verifyOtpAndLogin(request.getUsername(), request.getOtpCode(), ipAddress);
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+        } catch (com.ismile.core.auth.exception.SecurityException e) {
+            log.warn("OTP verification failed for user {}: {}", request.getUsername(), e.getMessage());
+            responseObserver.onError(Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
+        } catch (Exception e) {
+            log.error("OTP verification error: ", e);
+            responseObserver.onError(Status.INTERNAL.withDescription("OTP verification failed").asRuntimeException());
+        }
+    }
+
 
     /**
      * Logout user
@@ -144,30 +164,6 @@ public class AuthServiceImpl extends AuthServiceGrpc.AuthServiceImplBase {
                     .withDescription("Token refresh failed")
                     .asRuntimeException());
         }
-    }
-
-    /**
-     * Protected endpoint - requires JWT token
-     */
-    @Override
-    public void sayHello(HelloRequest request, StreamObserver<HelloReply> responseObserver) {
-        // Extract authenticated user info from context
-        Integer userId = GrpcContextUtil.getUserId();
-        String username = GrpcContextUtil.getUsername();
-
-        String message = String.format(
-                "Hello, %s! You are authenticated as user: %s (ID: %d)",
-                request.getName(),
-                username != null ? username : "unknown",
-                userId != null ? userId : 0
-        );
-
-        HelloReply reply = HelloReply.newBuilder()
-                .setMessage(message)
-                .build();
-
-        responseObserver.onNext(reply);
-        responseObserver.onCompleted();
     }
 
     /**

@@ -12,11 +12,17 @@ import com.ismile.core.auth.repository.RefreshTokenRepository;
 import com.ismile.core.auth.repository.RoleRepository;
 import com.ismile.core.auth.repository.UserRepository;
 import com.ismile.core.auth.security.*;
+import io.grpc.StatusRuntimeException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import otp.OtpServiceGrpc;
+import otp.OtpType;
+import otp.SendCodeRequest;
+import otp.VerifyCodeRequest;
+import otp.VerifyCodeResponse;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -41,6 +47,8 @@ public class AuthenticationService {
     private final PasswordValidator passwordValidator;
     private final JwtTokenProvider jwtTokenProvider;
     private final LoginAttemptService loginAttemptService;
+    private final OtpServiceGrpc.OtpServiceBlockingStub otpServiceBlockingStub;
+
 
     /**
      * Register new user
@@ -101,7 +109,8 @@ public class AuthenticationService {
     }
 
     /**
-     * Login user
+     * Login user. If OTP is enabled for the user, it initiates the OTP flow.
+     * Otherwise, it completes the login and returns JWT tokens.
      */
     @Transactional
     public AuthResponse login(String username, String password, String ipAddress) {
@@ -132,6 +141,30 @@ public class AuthenticationService {
             throw new SecurityException("Invalid username or password");
         }
 
+        // --- OTP FLOW ---
+        // If user has OTP enabled, send OTP and return an intermediate response.
+        if (user.isLoginOtp()) {
+            log.info("OTP login is enabled for user: {}. Initiating OTP flow.", username);
+            try {
+                otpServiceBlockingStub.sendCode(SendCodeRequest.newBuilder()
+                        .setUserId(user.getId())
+                        .setType(OtpType.LOGIN)
+                        .build());
+
+                // Return a response indicating that OTP is now required to proceed.
+                return AuthResponse.newBuilder()
+                        .setSuccess(true)
+                        .setMessage("OTP has been sent to your registered device.")
+                        .setOtpRequired(true)
+                        .build();
+            } catch (Exception e) {
+                log.error("Failed to send OTP for user: {}", username, e);
+                throw new SecurityException("Could not send OTP. Please try again later.");
+            }
+        }
+
+
+        // --- STANDARD LOGIN FLOW ---
         // Success - reset attempts
         loginAttemptService.resetLoginAttempts(username);
         loginAttemptService.recordLoginAttempt(username, true, ipAddress, null);
@@ -146,6 +179,50 @@ public class AuthenticationService {
 
         return generateAuthResponse(user);
     }
+
+    /**
+     * Verifies the OTP and, if successful, completes the login process by generating JWTs.
+     * @param username The user's username.
+     * @param otpCode The OTP code provided by the user.
+     * @param ipAddress The IP address of the user.
+     * @return AuthResponse containing JWTs upon successful verification.
+     */
+    @Transactional
+    public AuthResponse verifyOtpAndLogin(String username, String otpCode, String ipAddress) {
+        // 1. Find user
+        UserEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new SecurityException("Invalid username or OTP."));
+
+        // 2. Call OTP service to verify the code
+        try {
+            VerifyCodeRequest verifyRequest = VerifyCodeRequest.newBuilder()
+                    .setUserId(user.getId())
+                    .setType(OtpType.LOGIN)
+                    .setCode(otpCode)
+                    .build();
+            VerifyCodeResponse otpResponse = otpServiceBlockingStub.verifyCode(verifyRequest);
+
+            if (!otpResponse.getSuccess()) {
+                log.warn("OTP service returned unsuccessful verification for user: {}", username);
+                throw new SecurityException("Invalid or expired OTP code.");
+            }
+        } catch (StatusRuntimeException e) {
+            log.warn("OTP verification gRPC call failed for user {}: {}", username, e.getStatus());
+            throw new SecurityException("Invalid or expired OTP code.");
+        }
+
+        // 3. If OTP is correct, proceed with login success steps
+        loginAttemptService.resetLoginAttempts(username);
+        loginAttemptService.recordLoginAttempt(username, true, ipAddress, "Login successful via OTP");
+        user.setLastLogin(LocalDateTime.now());
+        userRepository.save(user);
+        logAudit(user, AuditLogEntity.AuditEventType.LOGIN_SUCCESS, ipAddress, "Login successful with OTP", true);
+        log.info("User logged in successfully with OTP: {}", username);
+
+        // 4. Generate and return tokens
+        return generateAuthResponse(user);
+    }
+
 
     /**
      * Logout user

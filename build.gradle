@@ -32,12 +32,16 @@ subprojects {
     // from being loaded onto the classpath at runtime.
     configurations.all {
         resolutionStrategy {
-            force 'io.grpc:grpc-api:1.60.0'
-            force 'io.grpc:grpc-core:1.60.0'
-            force 'io.grpc:grpc-netty:1.60.0'
-            force 'io.grpc:grpc-protobuf:1.60.0'
-            force 'io.grpc:grpc-stub:1.60.0'
-            force 'io.grpc:grpc-services:1.60.0'
+            force 'io.grpc:grpc-api:1.74.0'
+            force 'io.grpc:grpc-core:1.74.0'
+            force 'io.grpc:grpc-netty:1.74.0'
+            force 'io.grpc:grpc-protobuf:1.74.0'
+            force 'io.grpc:grpc-stub:1.74.0'
+            force 'io.grpc:grpc-services:1.74.0'
+            force 'io.grpc:protoc-gen-grpc-java:1.74.0'
+            force 'com.fasterxml.jackson.core:jackson-core:2.17.2'
+            force 'com.fasterxml.jackson.core:jackson-databind:2.17.2'
+            force 'com.fasterxml.jackson.core:jackson-annotations:2.17.2'
         }
     }
     // --- FIX ENDS HERE ---

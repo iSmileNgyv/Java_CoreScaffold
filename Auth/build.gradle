@@ -19,7 +19,7 @@ java {
 }
 
 ext {
-	grpcVersion = "1.62.2"
+	grpcVersion = "1.74.0"
 	protobufVersion = '4.28.2'
 	springGrpcVersion = "0.11.0"
 	springSecurityVersion = "6.4.2"
@@ -79,7 +79,7 @@ protobuf {
 	}
 	plugins {
 		grpc {
-			artifact = 'io.grpc:protoc-gen-grpc-java:1.60.0' // Or the latest stable version
+			artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}" // Or the latest stable version
 		}
 	}
 	generateProtoTasks {

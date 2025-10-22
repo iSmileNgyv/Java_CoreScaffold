@@ -35,7 +35,8 @@ public class GrpcAuthInterceptor implements ServerInterceptor {
             "auth.AuthService/RefreshToken",
             "otp.OtpService/SendCode",
             "otp.OtpService/VerifyCode",
-            "envoy.service.auth.v3.Authorization/Check"
+            "envoy.service.auth.v3.Authorization/Check",
+            "auth.AuthService/VerifyOtpAndLogin"
     );
 
     @Override

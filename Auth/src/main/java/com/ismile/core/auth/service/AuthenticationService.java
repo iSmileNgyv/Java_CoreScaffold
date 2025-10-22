@@ -55,13 +55,14 @@ public class AuthenticationService {
      */
     @Transactional
     public AuthResponse register(String username, String password, String name,
-                                 String surname, String phoneNumber, String ipAddress) {
+                                 String surname, String phoneNumber, String email, String ipAddress) {
 
         // Validate inputs
         InputValidator.validateUsername(username);
         InputValidator.validateName(name, "Name");
         InputValidator.validateName(surname, "Surname");
         InputValidator.validatePhoneNumber(phoneNumber);
+        InputValidator.validateEmail(email);
         passwordValidator.validate(password);
 
         // Sanitize inputs
@@ -69,6 +70,7 @@ public class AuthenticationService {
         name = InputValidator.sanitize(name);
         surname = InputValidator.sanitize(surname);
         phoneNumber = InputValidator.normalizePhoneNumber(phoneNumber);
+        email = InputValidator.sanitize(email);
 
         // Check if user exists
         if (userRepository.existsByUsername(username)) {
@@ -77,6 +79,10 @@ public class AuthenticationService {
 
         if (phoneNumber != null && userRepository.existsByPhoneNumber(phoneNumber)) {
             throw new SecurityException("Phone number already registered");
+        }
+
+        if(email != null && userRepository.existsByEmail(email)) {
+            throw new SecurityException("Email already registered");
         }
 
         // Get default role
@@ -90,6 +96,7 @@ public class AuthenticationService {
         user.setName(name);
         user.setSurname(surname);
         user.setPhoneNumber(phoneNumber);
+        user.setEmail(email);
         user.setAccountLocked(false);
 
         // Assign default role

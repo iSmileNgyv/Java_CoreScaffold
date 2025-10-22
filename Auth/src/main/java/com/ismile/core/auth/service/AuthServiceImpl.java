@@ -32,6 +32,7 @@ public class AuthServiceImpl extends AuthServiceGrpc.AuthServiceImplBase {
                     request.getName(),
                     request.getSurname(),
                     request.getPhoneNumber(),
+                    request.getEmail(),
                     ipAddress
             );
 

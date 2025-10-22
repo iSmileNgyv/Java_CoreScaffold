@@ -34,6 +34,9 @@ public class UserEntity {
     @Column(name = "phone_number", length = 20)
     private String phoneNumber;
 
+    @Column(name = "email", length = 100)
+    private String email;
+
     @Column(name = "login_otp", nullable = false)
     private boolean loginOtp = false;
 

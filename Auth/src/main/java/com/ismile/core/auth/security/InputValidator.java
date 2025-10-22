@@ -21,6 +21,8 @@ public class InputValidator {
     // Azerbaijan phone number: +994XXXXXXXXX or 0XXXXXXXXX
     private static final Pattern PHONE_PATTERN = Pattern.compile("^(\\+994|0)[0-9]{9}$");
 
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
+
     /**
      * Validate username
      */
@@ -62,6 +64,21 @@ public class InputValidator {
         if (!PHONE_PATTERN.matcher(phoneNumber).matches()) {
             throw new SecurityException(
                     "Invalid phone number format. Use: +994XXXXXXXXX or 0XXXXXXXXX"
+            );
+        }
+    }
+
+    /**
+     * Validate email address
+     */
+    public static void validateEmail(String email) {
+        if (email == null || email.isEmpty()) {
+            return; // Email is optional
+        }
+
+        if (!EMAIL_PATTERN.matcher(email).matches()) {
+            throw new SecurityException(
+                    "Invalid email address format."
             );
         }
     }

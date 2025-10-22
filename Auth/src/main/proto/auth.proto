@@ -20,6 +20,7 @@ message RegisterRequest {
   string name = 3;
   string surname = 4;
   string phone_number = 5;
+  string email = 6;
 }
 
 // Login

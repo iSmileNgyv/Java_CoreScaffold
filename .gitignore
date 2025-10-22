@@ -19,6 +19,7 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/     # src içində build qovluqlarını da ignore et
 !**/src/test/**/build/
+**/application-local.yml
 
 ### Eclipse (əgər kimsə istifadə edərsə) ###
 .classpath
@@ -50,7 +51,6 @@ logs/
 *.env
 .env.*
 *.properties.local
-
 ### Security ###
 keystore*.p12
 *.pem

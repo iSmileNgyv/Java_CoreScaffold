@@ -38,3 +38,11 @@ logging:
     com.ismile.core.otp: DEBUG
     org.springframework.data.redis: INFO
     org.hibernate.SQL: DEBUG
+
+otp:
+  security:
+    allowed-api-keys:
+      - change-me-otp-api-key # Replace with a strong, secret value per client
+    public-endpoints:
+      - grpc.health.v1.Health/Check
+      - grpc.health.v1.Health/Watch

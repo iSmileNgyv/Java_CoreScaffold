@@ -34,6 +34,7 @@ grpc:
   client:
     otp-service:
       address: localhost:5052
+      api-key: change-me-otp-api-key
 
 # Logging
 logging:

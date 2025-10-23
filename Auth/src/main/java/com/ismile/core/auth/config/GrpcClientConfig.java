@@ -2,17 +2,23 @@ package com.ismile.core.auth.config;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.Metadata;
+import io.grpc.stub.MetadataUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
 import otp.OtpServiceGrpc;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.StringUtils;
 
 @Configuration
 public class GrpcClientConfig {
 
     @Value("${grpc.client.otp-service.address}")
     private String otpServiceAddress;
+
+    @Value("${grpc.client.otp-service.api-key}")
+    private String otpServiceApiKey;
 
     /**
      * Creates a gRPC channel for the OTP service.
@@ -51,7 +57,16 @@ public class GrpcClientConfig {
      */
     @Bean
     public OtpServiceGrpc.OtpServiceBlockingStub otpServiceBlockingStub(@Qualifier("otpServiceChannel") ManagedChannel channel) {
-        return OtpServiceGrpc.newBlockingStub(channel);
+        if (!StringUtils.hasText(otpServiceApiKey)) {
+            throw new IllegalStateException("Missing gRPC API key configuration for OTP client (grpc.client.otp-service.api-key)");
+        }
+
+        Metadata headers = new Metadata();
+        Metadata.Key<String> apiKeyHeader = Metadata.Key.of("x-api-key", Metadata.ASCII_STRING_MARSHALLER);
+        headers.put(apiKeyHeader, otpServiceApiKey.trim());
+
+        return OtpServiceGrpc.newBlockingStub(channel)
+                .withInterceptors(MetadataUtils.newAttachHeadersInterceptor(headers));
     }
 }
 

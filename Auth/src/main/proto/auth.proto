@@ -23,6 +23,10 @@ message RegisterRequest {
   string email = 6;
 }
 
+message GetUserRequest {
+  int32 user_id = 1;
+}
+
 // Login
 message LoginRequest {
   string username = 1;
@@ -67,4 +71,5 @@ message UserInfo {
   string surname = 4;
   string phone_number = 5;
   repeated string roles = 6;
+  string email = 7;
 }

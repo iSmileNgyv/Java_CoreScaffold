@@ -98,13 +98,31 @@ public class AuthenticationService {
         user.setPhoneNumber(phoneNumber);
         user.setEmail(email);
         user.setAccountLocked(false);
+        user.setActive(false);
 
         // Assign default role
         List<RoleEntity> roles = new ArrayList<>();
         roles.add(defaultRole);
         user.setRoles(roles);
 
-        userRepository.save(user);
+        user = userRepository.save(user);
+
+        // --- OTP Göndərmə Başlatma ---
+        try {
+            // Artıq email və ya nömrə göndərmirik, OTP servisi özü Auth-dan soruşacaq
+            otpServiceBlockingStub.sendCode(SendCodeRequest.newBuilder()
+                    .setUserId(user.getId())
+                    .setType(OtpType.REGISTRATION)
+                    .build());
+        } catch (StatusRuntimeException e) {
+            log.error("gRPC Error calling OTP service for new user {}: {}", username, e.getStatus());
+            // Rollback lazımdır əslində, amma sadəlik üçün xəta qaytaraq
+            throw new SecurityException("User created, but failed to initiate verification code process. Please contact support.");
+        } catch (Exception e) {
+            log.error("Unexpected Error initiating OTP for new user {}: {}", username, e.getMessage(), e);
+            throw new SecurityException("User created, but an unexpected error occurred during verification initiation.");
+        }
+        // ------------------------------------
 
         // Audit log
         logAudit(user, AuditLogEntity.AuditEventType.REGISTER, ipAddress, "User registered", true);
@@ -230,6 +248,50 @@ public class AuthenticationService {
         return generateAuthResponse(user);
     }
 
+    @Transactional
+    public AuthResponse verifyOtpAndRegister(String username, String otpCode, String ipAddress) {
+        UserEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new SecurityException("Invalid username or verification code.")); // Xəta mesajını ümumiləşdiririk
+
+        if (user.isActive()) {
+            throw new SecurityException("Account is already verified and active.");
+        }
+
+        // 3. OTP servisinə müraciət edərək kodu yoxla
+        try {
+            VerifyCodeRequest verifyRequest = VerifyCodeRequest.newBuilder()
+                    .setUserId(user.getId())
+                    .setType(OtpType.REGISTRATION) // <-- REGISTRATION tipini yoxla
+                    .setCode(otpCode)
+                    .build();
+            VerifyCodeResponse otpResponse = otpServiceBlockingStub.verifyCode(verifyRequest);
+
+            if (!otpResponse.getSuccess()) {
+                log.warn("Registration OTP verification failed for user: {}", username);
+                // Audit log əlavə etmək olar
+                throw new SecurityException("Invalid or expired verification code.");
+            }
+        } catch (StatusRuntimeException e) {
+            // Status koduna görə fərqli mesaj vermək olar (INVALID_ARGUMENT vs INTERNAL)
+            log.warn("Registration OTP verification gRPC call failed for user {}: {}", username, e.getStatus());
+            throw new SecurityException("Invalid or expired verification code."); // İstifadəçiyə eyni mesajı göstəririk
+        } catch (Exception e) {
+            log.error("Unexpected error verifying registration OTP for user {}: {}", username, e.getMessage(), e);
+            throw new SecurityException("Failed to verify code due to an internal error.");
+        }
+
+        // 4. OTP düzgündürsə, istifadəçini aktivləşdir
+        user.setActive(true);
+        // user.setLastLogin(LocalDateTime.now()); // İlk login-də qeyd olunsun daha yaxşıdır
+        userRepository.save(user);
+
+        // LOGIN_SUCCESS audit tipi uyğundurmu? Bəlkə yeni tip əlavə edək? Hələlik belə qalsın.
+        logAudit(user, AuditLogEntity.AuditEventType.LOGIN_SUCCESS, ipAddress, "Account verified via OTP", true);
+        log.info("User account verified and activated: {}", username);
+
+        // 5. Tokenləri generasiya et və qaytar (artıq login etmiş sayılır)
+        return generateAuthResponse(user);
+    }
 
     /**
      * Logout user

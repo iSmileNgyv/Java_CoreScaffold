@@ -1,6 +1,9 @@
 package com.ismile.core.auth.service;
 
 import auth.*;
+import com.ismile.core.auth.entity.RoleEntity;
+import com.ismile.core.auth.entity.UserEntity;
+import com.ismile.core.auth.repository.UserRepository;
 import com.ismile.core.auth.util.GrpcContextUtil;
 import io.grpc.Context;
 import io.grpc.Metadata;
@@ -10,13 +13,48 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.grpc.server.service.GrpcService;
 
+import java.util.stream.Collectors;
+
 @GrpcService
 @RequiredArgsConstructor
 @Slf4j
 public class AuthServiceImpl extends AuthServiceGrpc.AuthServiceImplBase {
 
     private final AuthenticationService authenticationService;
+    private final UserRepository userRepository;
     private static final Context.Key<Metadata> METADATA_KEY = Context.key("metadata");
+
+    @Override
+    public void getUserInfo(GetUserRequest request, StreamObserver<UserInfo> responseObserver) {
+        log.debug("GetUserInfo request received for user_id: {}", request.getUserId());
+        try {
+            UserEntity userEntity = userRepository.findById(request.getUserId())
+                    .orElseThrow(() -> Status.NOT_FOUND
+                            .withDescription("User not found with ID: " + request.getUserId())
+                            .asRuntimeException());
+
+            UserInfo userInfo = UserInfo.newBuilder()
+                    .setId(userEntity.getId())
+                    .setUsername(userEntity.getUsername())
+                    .setName(userEntity.getName())
+                    .setSurname(userEntity.getSurname())
+                    .setEmail(userEntity.getEmail() != null ? userEntity.getEmail() : "") // Emaili əlavə et
+                    .setPhoneNumber(userEntity.getPhoneNumber() != null ? userEntity.getPhoneNumber() : "")
+                    .addAllRoles(userEntity.getRoles().stream().map(RoleEntity::getCode).collect(Collectors.toList()))
+                    .build();
+
+            responseObserver.onNext(userInfo);
+            responseObserver.onCompleted();
+            log.debug("GetUserInfo successful for user_id: {}", request.getUserId());
+
+        } catch (Exception e) {
+            log.error("Error retrieving user info for user_id {}: {}", request.getUserId(), e.getMessage());
+            responseObserver.onError(Status.INTERNAL
+                    .withDescription("Failed to retrieve user info: " + e.getMessage())
+                    .withCause(e)
+                    .asRuntimeException());
+        }
+    }
 
     /**
      * Register new user

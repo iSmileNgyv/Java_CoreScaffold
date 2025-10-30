@@ -1,0 +1,18 @@
+spring:
+  grpc:
+    server:
+      port: 5054
+  application:
+    name: Docs
+  elasticsearch:
+    uris: http://localhost:9200
+#    username: elastic
+#    password: changeme
+#    connection-timeout: 5s
+#    socket-timeout: 30s
+server:
+  port: 8084
+logging:
+  level:
+    com.ismile.core.docs: DEBUG
+    org.springframework.data.elasticsearch.core: INFO

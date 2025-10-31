@@ -16,6 +16,9 @@ service DocsService {
   // Gets the contents of a category (sub-folders and files)
   rpc ListCategoryContents (ListCategoryContentsRequest) returns (CategoryContentsResponse);
 
+  // Lists all categories as a tree structure
+  rpc ListCategories (ListCategoriesRequest) returns (CategoryTreeResponse);
+
   // Gets the content of a single document
   rpc GetDocumentation (GetDocumentationRequest) returns (DocumentationResponse);
 
@@ -47,6 +50,17 @@ message CreateCategoryRequest {
 
 message CategoryResponse {
   Category category = 1;
+}
+
+message ListCategoriesRequest {}
+
+message CategoryTreeNode {
+  Category category = 1;
+  repeated CategoryTreeNode children = 2;
+}
+
+message CategoryTreeResponse {
+  repeated CategoryTreeNode categories = 1;
 }
 
 // --- Documentation Messages ---

@@ -62,6 +62,21 @@ public class DocsDomainService {
                 return categoryRepository.findByParentId(normalizeParentId(parentId));
         }
 
+        public List<CategoryNode> getCategoryTree() {
+                List<CategoryDocument> roots = categoryRepository.findByParentId(ROOT_CATEGORY_ID);
+                return roots.stream()
+                        .map(this::buildCategoryNode)
+                        .toList();
+        }
+
+        private CategoryNode buildCategoryNode(CategoryDocument category) {
+                List<CategoryDocument> children = categoryRepository.findByParentId(category.getId());
+                List<CategoryNode> childNodes = children.stream()
+                        .map(this::buildCategoryNode)
+                        .toList();
+                return new CategoryNode(category, childNodes);
+        }
+
         public DocumentationDocument createDocumentation(String title, String content, String categoryId) {
                 if (!StringUtils.hasText(title)) {
                         throw new IllegalArgumentException("Document title must not be empty");
@@ -175,5 +190,8 @@ public class DocsDomainService {
         }
 
         public record SearchResult(List<DocumentationDocument> documents, long totalHits) {
+        }
+
+        public record CategoryNode(CategoryDocument category, List<CategoryNode> children) {
         }
 }

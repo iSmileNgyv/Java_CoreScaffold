@@ -54,6 +54,11 @@ static_resources:
                           route:
                             # This now points to the new cluster dedicated to gRPC traffic
                             cluster: notification_grpc
+                        # Route for Docs service gRPC traffic
+                        - match:
+                            prefix: "/docs.DocsService/"
+                          route:
+                            cluster: docs
                 http_filters:
                   - name: envoy.filters.http.ext_authz
                     typed_config:
@@ -158,6 +163,24 @@ static_resources:
                       address: host.docker.internal
                       # This cluster points to the new WebSocket/HTTP port
                       port_value: 8083
+
+    - name: docs
+      type: STRICT_DNS
+      typed_extension_protocol_options:
+        envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+          "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+          explicit_http_config:
+            http2_protocol_options: {}
+      dns_lookup_family: V4_ONLY
+      load_assignment:
+        cluster_name: docs
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: host.docker.internal
+                      port_value: 5054
 
 admin:
   address:

@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -105,6 +106,48 @@ class DocsDomainServiceTest {
                 assertThat(result.documents()).isEmpty();
                 assertThat(result.totalHits()).isZero();
                 verifyNoInteractions(elasticsearchOperations);
+        }
+
+        @Test
+        void getCategoryTreeBuildsNestedStructure() {
+                CategoryDocument core = CategoryDocument.builder()
+                        .id("core")
+                        .name("Core")
+                        .parentId(DocsDomainService.ROOT_CATEGORY_ID)
+                        .build();
+                CategoryDocument misc = CategoryDocument.builder()
+                        .id("misc")
+                        .name("Misc")
+                        .parentId(DocsDomainService.ROOT_CATEGORY_ID)
+                        .build();
+                CategoryDocument auth = CategoryDocument.builder()
+                        .id("auth")
+                        .name("Auth")
+                        .parentId("core")
+                        .build();
+                CategoryDocument otp = CategoryDocument.builder()
+                        .id("otp")
+                        .name("OTP")
+                        .parentId("core")
+                        .build();
+
+                when(categoryRepository.findByParentId(DocsDomainService.ROOT_CATEGORY_ID)).thenReturn(List.of(core, misc));
+                when(categoryRepository.findByParentId("core")).thenReturn(List.of(auth, otp));
+                when(categoryRepository.findByParentId("misc")).thenReturn(List.of());
+                when(categoryRepository.findByParentId("auth")).thenReturn(List.of());
+                when(categoryRepository.findByParentId("otp")).thenReturn(List.of());
+
+                List<DocsDomainService.CategoryNode> tree = docsDomainService.getCategoryTree();
+
+                assertThat(tree).hasSize(2);
+                DocsDomainService.CategoryNode coreNode = tree.get(0);
+                assertThat(coreNode.category()).isEqualTo(core);
+                assertThat(coreNode.children()).hasSize(2)
+                        .extracting(DocsDomainService.CategoryNode::category)
+                        .containsExactly(auth, otp);
+                DocsDomainService.CategoryNode miscNode = tree.get(1);
+                assertThat(miscNode.category()).isEqualTo(misc);
+                assertThat(miscNode.children()).isEmpty();
         }
 
         private ArgumentMatcher<CategoryDocument> withParent(String parentId) {

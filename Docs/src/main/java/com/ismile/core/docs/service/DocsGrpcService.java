@@ -6,6 +6,8 @@ import com.ismile.core.docs.service.DocsDomainService.SearchResult;
 import docs.Category;
 import docs.CategoryContentsResponse;
 import docs.CategoryResponse;
+import docs.CategoryTreeNode;
+import docs.CategoryTreeResponse;
 import docs.CreateCategoryRequest;
 import docs.CreateDocumentationRequest;
 import docs.DeleteCategoryRequest;
@@ -15,6 +17,7 @@ import docs.DocsServiceGrpc;
 import docs.Documentation;
 import docs.DocumentationResponse;
 import docs.GetDocumentationRequest;
+import docs.ListCategoriesRequest;
 import docs.ListCategoryContentsRequest;
 import docs.SearchDocumentsRequest;
 import docs.SearchDocumentsResponse;
@@ -94,6 +97,20 @@ public class DocsGrpcService extends DocsServiceGrpc.DocsServiceImplBase {
                 } catch (Exception e) {
                         log.error("Failed to list contents for category [{}]", request.getCategoryId(), e);
                         responseObserver.onError(Status.INTERNAL.withDescription("Unable to list category contents").asRuntimeException());
+                }
+        }
+
+        @Override
+        public void listCategories(ListCategoriesRequest request, StreamObserver<CategoryTreeResponse> responseObserver) {
+                try {
+                        List<DocsDomainService.CategoryNode> tree = domainService.getCategoryTree();
+                        CategoryTreeResponse.Builder builder = CategoryTreeResponse.newBuilder();
+                        tree.stream().map(this::toProto).forEach(builder::addCategories);
+                        responseObserver.onNext(builder.build());
+                        responseObserver.onCompleted();
+                } catch (Exception e) {
+                        log.error("Failed to list categories", e);
+                        responseObserver.onError(Status.INTERNAL.withDescription("Unable to list categories").asRuntimeException());
                 }
         }
 
@@ -213,5 +230,14 @@ public class DocsGrpcService extends DocsServiceGrpc.DocsServiceImplBase {
 
         private String defaultString(String value) {
                 return value == null ? "" : value;
+        }
+
+        private CategoryTreeNode toProto(DocsDomainService.CategoryNode node) {
+                CategoryTreeNode.Builder builder = CategoryTreeNode.newBuilder()
+                        .setCategory(toProto(node.category()));
+                node.children().stream()
+                        .map(this::toProto)
+                        .forEach(builder::addChildren);
+                return builder.build();
         }
 }

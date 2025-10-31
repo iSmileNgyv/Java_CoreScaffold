@@ -1,0 +1,27 @@
+spring:
+  grpc:
+    server:
+      port: 5054
+  application:
+    name: Docs
+  elasticsearch:
+    uris: http://localhost:9200
+#    username: elastic
+#    password: changeme
+#    connection-timeout: 5s
+#    socket-timeout: 30s
+server:
+  port: 8084
+logging:
+  level:
+    com.ismile.core.docs: DEBUG
+    org.springframework.data.elasticsearch.core: INFO
+
+jwt:
+  secret: ${JWT_SECRET:MyVerySecureSecretKeyForJWT2024WithAtLeast512BitsForHS512Algorithm!ChangeThisInProduction}
+
+docs:
+  security:
+    public-endpoints:
+      - grpc.health.v1.Health/Check
+      - grpc.health.v1.Health/Watch

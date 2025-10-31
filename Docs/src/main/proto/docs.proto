@@ -1,0 +1,132 @@
+syntax = "proto3";
+
+package docs;
+
+option java_multiple_files = true;
+option java_outer_classname = "DocsProto";
+
+// The main service for managing documentation
+service DocsService {
+  // Creates a new category (folder)
+  rpc CreateCategory (CreateCategoryRequest) returns (CategoryResponse);
+
+  // Creates a new document (file)
+  rpc CreateDocumentation (CreateDocumentationRequest) returns (DocumentationResponse);
+
+  // Gets the contents of a category (sub-folders and files)
+  rpc ListCategoryContents (ListCategoryContentsRequest) returns (CategoryContentsResponse);
+
+  // Lists all categories as a tree structure
+  rpc ListCategories (ListCategoriesRequest) returns (CategoryTreeResponse);
+
+  // Gets the content of a single document
+  rpc GetDocumentation (GetDocumentationRequest) returns (DocumentationResponse);
+
+  // Updates a document
+  rpc UpdateDocumentation (UpdateDocumentationRequest) returns (DocumentationResponse);
+
+  // Deletes a category (and all its contents)
+  rpc DeleteCategory (DeleteCategoryRequest) returns (DeleteResponse);
+
+  // Deletes a document
+  rpc DeleteDocumentation (DeleteDocumentationRequest) returns (DeleteResponse);
+
+  // Searches across all documents
+  rpc SearchDocuments (SearchDocumentsRequest) returns (SearchDocumentsResponse);
+}
+
+// --- Category Messages ---
+
+message Category {
+  string id = 1;
+  string name = 2;
+  string parent_id = 3; // ID of the parent category
+}
+
+message CreateCategoryRequest {
+  string name = 1;
+  string parent_id = 2; // Can be empty for root categories
+}
+
+message CategoryResponse {
+  Category category = 1;
+}
+
+message ListCategoriesRequest {}
+
+message CategoryTreeNode {
+  Category category = 1;
+  repeated CategoryTreeNode children = 2;
+}
+
+message CategoryTreeResponse {
+  repeated CategoryTreeNode categories = 1;
+}
+
+// --- Documentation Messages ---
+
+message Documentation {
+  string id = 1;
+  string title = 2;
+  string content = 3;
+  string category_id = 4; // ID of the parent category
+}
+
+message CreateDocumentationRequest {
+  string title = 1;
+  string content = 2;
+  string category_id = 3;
+}
+
+message UpdateDocumentationRequest {
+  string document_id = 1;
+  string title = 2;
+  string content = 3;
+}
+
+message GetDocumentationRequest {
+  string document_id = 1;
+}
+
+message DocumentationResponse {
+  Documentation document = 1;
+}
+
+// --- Listing and Search Messages ---
+
+message ListCategoryContentsRequest {
+  // The ID of the category to list.
+  // Use a special value (e.g., "root" or empty) for the top-level.
+  string category_id = 1;
+}
+
+message CategoryContentsResponse {
+  repeated Category categories = 1; // Sub-folders
+  repeated Documentation documents = 2; // Files in this folder
+}
+
+message SearchDocumentsRequest {
+  string query = 1;
+  int32 page = 2;
+  int32 size = 3;
+}
+
+message SearchDocumentsResponse {
+  repeated Documentation documents = 1;
+  int64 total_hits = 2;
+}
+
+// --- Common Delete Messages ---
+
+message DeleteCategoryRequest {
+  string category_id = 1;
+}
+
+message DeleteDocumentationRequest {
+  string document_id = 1;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}

@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: ChronoVCS-CLI
+  main:
+    log-startup-info: false
+    banner-mode: off
+logging:
+  level:
+    root: off
+    org.springframework: off
+    org.springframework.boot: off
+cli:
+  alias: chronovcs
+  appName: "Chrono Version Control System"
+  version: "1.0.0"

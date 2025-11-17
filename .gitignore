@@ -1,10 +1,11 @@
 ### IntelliJ IDEA ###
 .idea/
+.vscode/
 *.iws
 *.iml
 *.ipr
 out/
-
+*.vcs/
 ### Java ###
 *.class
 *.log

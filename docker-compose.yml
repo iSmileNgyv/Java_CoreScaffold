@@ -24,6 +24,19 @@ services:
     volumes:
       - auth_pg_data:/var/lib/postgresql/data
 
+  chronovcs-postgres:
+    image: postgres:15
+    container_name: chronovcs-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: chronovcs_user
+      POSTGRES_PASSWORD: chronovcs_password
+      POSTGRES_DB: chronovcs_db
+    ports:
+      - "5436:5432"
+    volumes:
+      - chronovcs_pg_data:/var/lib/postgresql/data
+
   redis:
     image: redis:7-alpine
     container_name: auth-redis
@@ -126,6 +139,7 @@ volumes:
   auth_redis_data:
   otp_pg_data:
   notification_pg_data:
+  chronovcs_pg_data:
   es_data:
 
 networks:

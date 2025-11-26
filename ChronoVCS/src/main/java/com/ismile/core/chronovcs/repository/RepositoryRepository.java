@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface RepositoryRepository extends JpaRepository<RepositoryEntity, Long> {
     Optional<RepositoryEntity> findByRepoKey(String repoKey);
+    Optional<RepositoryEntity> findByRepoKeyIgnoreCase(String repoKey);
 }

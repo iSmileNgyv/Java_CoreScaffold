@@ -13,3 +13,8 @@ spring:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
 server:
   port: 8081
+
+chronovcs:
+  storage:
+    local:
+      base-path: /tmp/chronovcs/blobs

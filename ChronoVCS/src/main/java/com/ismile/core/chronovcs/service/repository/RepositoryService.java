@@ -6,6 +6,8 @@ import com.ismile.core.chronovcs.dto.handshake.HandshakeResponse;
 import com.ismile.core.chronovcs.dto.handshake.HandshakeUserDto;
 import com.ismile.core.chronovcs.entity.RepoPermissionEntity;
 import com.ismile.core.chronovcs.entity.RepositoryEntity;
+import com.ismile.core.chronovcs.exception.RepositoryNotFoundException;
+import com.ismile.core.chronovcs.repository.RepositoryRepository;
 import com.ismile.core.chronovcs.service.auth.AuthenticatedUser;
 import com.ismile.core.chronovcs.service.permission.PermissionService;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Service;
 public class RepositoryService {
 
     private final PermissionService permissionService;
+    private final RepositoryRepository repositoryRepository;
 
     public HandshakeResponse handshake(AuthenticatedUser user, String repoKey) {
 
@@ -58,5 +61,10 @@ public class RepositoryService {
                 .repository(repoDto)
                 .permissions(permDto)
                 .build();
+    }
+
+    public RepositoryEntity getByKeyOrThrow(String repoKey) {
+        return repositoryRepository.findByRepoKeyIgnoreCase(repoKey)
+                .orElseThrow(() -> new RepositoryNotFoundException(repoKey));
     }
 }

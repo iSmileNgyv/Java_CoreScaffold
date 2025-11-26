@@ -74,6 +74,10 @@ public class RepositoryEntity {
     )
     private UserEntity owner;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "storage_type", nullable = false, length = 32)
+    private StorageType storageType = StorageType.LOCAL;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 

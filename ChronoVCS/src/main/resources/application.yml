@@ -18,3 +18,8 @@ chronovcs:
   storage:
     local:
       base-path: /tmp/chronovcs/blobs
+  security:
+    jwt:
+      secret: "Q0hST05PVkNTX0RFVl9TRUNSRVRfQ0hBTkdFX01F"
+      access-ttl-seconds: 900
+      refresh-ttl-seconds: 2592000

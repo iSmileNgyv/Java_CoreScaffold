@@ -2,7 +2,7 @@ spring:
   application:
     name: ChronoVCS
   datasource:
-    url: jdbc:postgresql://localhost:5433/chronovcs_db
+    url: jdbc:postgresql://localhost:5436/chronovcs_db
     username: chronovcs_user
     password: chronovcs_password
     driver-class-name: org.postgresql.Driver
@@ -11,3 +11,10 @@ spring:
       ddl-auto: update
     show-sql: true
     database-platform: org.hibernate.dialect.PostgreSQLDialect
+server:
+  port: 8081
+
+chronovcs:
+  storage:
+    local:
+      base-path: /tmp/chronovcs/blobs

@@ -13,8 +13,11 @@ import picocli.CommandLine.Command;
                 InitCommand.class,           // we will create next
                 CommitCommand.class,
                 StatusCommand.class,
-                AddCommand.class
-                // PushCommand.class,
+                AddCommand.class,
+                RemoteHandshakeCommand.class,
+                RemoteConfigCommand.class,
+                LoginCommand.class,
+                PushCommand.class
                 // PullCommand.class,
                 // FetchCommand.class,
                 // BranchCommand.class,

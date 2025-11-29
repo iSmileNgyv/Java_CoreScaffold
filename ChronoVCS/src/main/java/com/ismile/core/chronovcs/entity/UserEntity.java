@@ -20,6 +20,8 @@ public class UserEntity {
     private Long id;
     @Column(name = "user_uid", nullable = false, unique = true)
     private String userUid;
+    @Column(name = "username", nullable = false, unique = true)
+    private String username;
     @Column(length = 100)
     private String email;
     @Column(name = "token_hash", length = 500)

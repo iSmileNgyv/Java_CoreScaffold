@@ -1,13 +1,11 @@
 package com.ismile.core.chronovcs.controller;
 
 import com.ismile.core.chronovcs.dto.handshake.HandshakeResponse;
-import com.ismile.core.chronovcs.exception.UnauthorizedException;
-import com.ismile.core.chronovcs.service.auth.AuthService;
 import com.ismile.core.chronovcs.service.auth.AuthenticatedUser;
 import com.ismile.core.chronovcs.service.permission.PermissionService;
 import com.ismile.core.chronovcs.service.repository.RepositoryService;
+import com.ismile.core.chronovcs.web.CurrentUser;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,33 +13,34 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/repositories")
 @RequiredArgsConstructor
 public class RepositoryController {
-    private final AuthService authService;
+
     private final PermissionService permissionService;
     private final RepositoryService repositoryService;
 
     @GetMapping("/{repoKey}/info")
     public ResponseEntity<String> getRepoInfo(
-            @PathVariable String repoKey,
-            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader
+            @CurrentUser AuthenticatedUser user,
+            @PathVariable String repoKey
     ) {
-        AuthenticatedUser user = authService.authenticate(authorizationHeader)
-                .orElseThrow(() -> new UnauthorizedException("Invalid or missing credentials"));
-
         permissionService.assertCanRead(user, repoKey);
+        return ResponseEntity.ok(
+                "Repo info for: " + repoKey + " (user: " + user.getUserUid() + ")"
+        );
+    }
 
-        return ResponseEntity.ok("Repo info for: " + repoKey + " (user: " + user.getUserUid() + ")");
+    @GetMapping
+    public ResponseEntity<String> listRepositories(
+            @CurrentUser AuthenticatedUser user
+    ) {
+        return ResponseEntity.ok("List of repositories for user: " + user.getUserUid());
     }
 
     @PostMapping("/{repoKey}/handshake")
     public ResponseEntity<HandshakeResponse> handshake(
-            @PathVariable String repoKey,
-            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader
+            @CurrentUser AuthenticatedUser user,
+            @PathVariable String repoKey
     ) {
-        AuthenticatedUser user = authService.authenticate(authorizationHeader).orElseThrow(
-                () -> new UnauthorizedException("Invalid or missing credentials")
-        );
         HandshakeResponse response = repositoryService.handshake(user, repoKey);
-
         return ResponseEntity.ok(response);
     }
 }

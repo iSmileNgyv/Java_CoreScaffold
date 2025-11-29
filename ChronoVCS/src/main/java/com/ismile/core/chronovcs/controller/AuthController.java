@@ -1,42 +1,25 @@
 package com.ismile.core.chronovcs.controller;
 
-import com.ismile.core.chronovcs.service.auth.AuthService;
 import com.ismile.core.chronovcs.service.auth.AuthenticatedUser;
-import lombok.Value;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
+import com.ismile.core.chronovcs.web.CurrentUser;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
-@RequiredArgsConstructor
 public class AuthController {
 
-    private final AuthService authService;
-
+    /**
+     * CLI-nin "self" üçün istifadə etdiyi endpoint.
+     * Basic auth filter-də yoxlanır, burda sadəcə CurrentUser qaytarırıq.
+     */
     @GetMapping("/self")
-    public ResponseEntity<SelfResponse> self(
-            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader
+    public ResponseEntity<AuthenticatedUser> self(
+            @CurrentUser AuthenticatedUser user
     ) {
-        AuthenticatedUser user = authService.authenticate(authorizationHeader)
-                .orElseThrow(() -> new com.ismile.core.chronovcs.exception.UnauthorizedException(
-                        "Invalid or missing credentials"
-                ));
-
-        return ResponseEntity.ok(
-                new SelfResponse(
-                        user.getUserId(),
-                        user.getUserUid(),
-                        user.getEmail()
-                )
-        );
-    }
-
-    @Value
-    public static class SelfResponse {
-        Long userId;
-        String userUid;
-        String email;
+        if (user == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(user);
     }
 }

@@ -7,7 +7,12 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "users")
+@Table(
+        name = "chronovcs_users", indexes = {
+            @Index(name = "idx_user_email", columnList = "email", unique = true),
+            @Index(name = "idx_user_uid", columnList = "user_uid", unique = true)
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor

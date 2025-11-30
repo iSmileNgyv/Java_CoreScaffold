@@ -1,90 +1,96 @@
 package com.ismile.core.chronovcs.service.auth;
 
+import com.ismile.core.chronovcs.config.security.ChronoUserPrincipal;
 import com.ismile.core.chronovcs.config.security.JwtProperties;
-import com.ismile.core.chronovcs.dto.auth.TokenPair;
-import com.ismile.core.chronovcs.exception.UnauthorizedException;
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
-import java.time.Instant;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
 
 @Service
 @RequiredArgsConstructor
 public class JwtTokenService {
 
-    private final JwtProperties properties;
+    private final JwtProperties jwtProperties;
 
-    private Key getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(properties.getSecret());
-        return Keys.hmacShaKeyFor(keyBytes);
+    public String generateAccessToken(UserDetails userDetails) {
+        Map<String, Object> claims = new HashMap<>();
+
+        // DÜZƏLİŞ: User ID-ni tokenə əlavə edirik
+        if (userDetails instanceof ChronoUserPrincipal) {
+            Long userId = ((ChronoUserPrincipal) userDetails).getUser().getUserId();
+            claims.put("userId", userId);
+        }
+
+        return buildToken(claims, userDetails, jwtProperties.getAccessTtlSeconds() * 1000);
     }
 
-    public TokenPair generateTokens(AuthenticatedUser user) {
-        String access = generateToken(user, "access", properties.getAccessTtlSeconds());
-        String refresh = generateToken(user, "refresh", properties.getRefreshTtlSeconds());
-        return new TokenPair(access, refresh);
+    // Token-i yoxlayır və UserDetails çıxarır
+    public UserDetails getUserFromToken(String token) {
+        String email = extractUsername(token);
+
+        // DÜZƏLİŞ: User ID-ni tokendən geri oxuyuruq
+        Claims claims = extractAllClaims(token);
+        Long userId = claims.get("userId", Long.class);
+
+        AuthenticatedUser authUser = new AuthenticatedUser();
+        authUser.setEmail(email);
+        authUser.setUserId(userId); // <--- Ən vacib hissə budur!
+
+        return new ChronoUserPrincipal(authUser);
     }
 
-    private String generateToken(AuthenticatedUser user, String type, long ttlSeconds) {
-        Instant now = Instant.now();
-        Instant exp = now.plusSeconds(ttlSeconds);
+    public boolean validateToken(String token) {
+        try {
+            return !isTokenExpired(token);
+        } catch (Exception e) {
+            return false;
+        }
+    }
 
+    private String extractUsername(String token) {
+        return extractClaim(token, Claims::getSubject);
+    }
+
+    private <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+        final Claims claims = extractAllClaims(token);
+        return claimsResolver.apply(claims);
+    }
+
+    private Claims extractAllClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getSignInKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
+
+    private boolean isTokenExpired(String token) {
+        return extractClaim(token, Claims::getExpiration).before(new Date());
+    }
+
+    private String buildToken(Map<String, Object> extraClaims, UserDetails userDetails, long expiration) {
         return Jwts.builder()
-                .setSubject(user.getUserUid())
-                .claim("uid", user.getUserUid())
-                .claim("email", user.getEmail())
-                .claim("type", type)
-                .setIssuedAt(Date.from(now))
-                .setExpiration(Date.from(exp))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .setClaims(extraClaims)
+                .setSubject(userDetails.getUsername())
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(getSignInKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    public AuthenticatedUser parseAccessToken(String token) {
-        return parseToken(token, "access");
-    }
-
-    public AuthenticatedUser parseRefreshToken(String token) {
-        return parseToken(token, "refresh");
-    }
-
-    private AuthenticatedUser parseToken(String token, String expectedType) {
-        try {
-            Jws<Claims> jws = Jwts.parserBuilder()
-                    .setSigningKey(getSigningKey())
-                    .build()
-                    .parseClaimsJws(token);
-
-            Claims claims = jws.getBody();
-            String type = claims.get("type", String.class);
-
-            if (!expectedType.equals(type)) {
-                throw new UnauthorizedException("Invalid token type");
-            }
-
-            String uid = claims.get("uid", String.class);
-            String email = claims.get("email", String.class);
-
-            if (uid == null || email == null) {
-                throw new UnauthorizedException("Invalid token payload");
-            }
-
-            AuthenticatedUser user = new AuthenticatedUser();
-            user.setUserUid(uid);
-            user.setEmail(email);
-            // id-ni claim-lərə əlavə etmək istəsən, burda da çıxardıb set edə bilərsən.
-
-            return user;
-
-        } catch (ExpiredJwtException e) {
-            throw new UnauthorizedException("Token expired");
-        } catch (JwtException e) {
-            throw new UnauthorizedException("Invalid token");
-        }
+    private Key getSignInKey() {
+        byte[] keyBytes = Decoders.BASE64.decode(jwtProperties.getSecret());
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 }

@@ -1,19 +1,25 @@
 package com.ismile.core.chronovcs.service.auth;
 
 import com.ismile.core.chronovcs.entity.UserEntity;
-import lombok.Value;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@Value
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class AuthenticatedUser {
-    Long userId;
-    String userUid;
-    String email;
+    private Long userId;
+    private String userUid;
+    private String email;
 
     public static AuthenticatedUser fromEntity(UserEntity user) {
-        return new AuthenticatedUser(
-                user.getId(),
-                user.getUserUid(),
-                user.getEmail()
-        );
+        return AuthenticatedUser.builder()
+                .userId(user.getId())
+                .userUid(user.getUserUid())
+                .email(user.getEmail())
+                .build();
     }
 }

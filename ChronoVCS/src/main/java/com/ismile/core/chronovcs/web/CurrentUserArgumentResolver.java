@@ -1,9 +1,10 @@
 package com.ismile.core.chronovcs.web;
 
+import com.ismile.core.chronovcs.config.security.ChronoUserPrincipal;
 import com.ismile.core.chronovcs.service.auth.AuthenticatedUser;
-import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
 import org.springframework.core.MethodParameter;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
@@ -11,13 +12,13 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
 @Component
-@RequiredArgsConstructor
 public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolver {
 
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
+        // Yalnız @CurrentUser annotasiyası olan və tipi AuthenticatedUser olan parametrləri emal edir
         return parameter.hasParameterAnnotation(CurrentUser.class)
-                && AuthenticatedUser.class.isAssignableFrom(parameter.getParameterType());
+                && parameter.getParameterType().isAssignableFrom(AuthenticatedUser.class);
     }
 
     @Override
@@ -26,17 +27,13 @@ public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolve
                                   NativeWebRequest webRequest,
                                   WebDataBinderFactory binderFactory) {
 
-        HttpServletRequest request = webRequest.getNativeRequest(HttpServletRequest.class);
-        if (request == null) {
-            return null;
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication != null && authentication.getPrincipal() instanceof ChronoUserPrincipal) {
+            ChronoUserPrincipal principal = (ChronoUserPrincipal) authentication.getPrincipal();
+            return principal.getUser();
         }
 
-        Object attr = request.getAttribute(ChronoAuthFilter.REQ_ATTR_CURRENT_USER);
-        if (attr instanceof AuthenticatedUser) {
-            return attr;
-        }
-
-        // Auth olmayıbsa null qaytarırıq, controller özündə 401 ata bilər
-        return null;
+        return null; // Və ya istəyərsən throw new UnauthorizedException(...)
     }
 }

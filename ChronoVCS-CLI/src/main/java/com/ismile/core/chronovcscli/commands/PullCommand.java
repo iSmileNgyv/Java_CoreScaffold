@@ -1,0 +1,87 @@
+package com.ismile.core.chronovcscli.commands;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ismile.core.chronovcscli.auth.CredentialsEntry;
+import com.ismile.core.chronovcscli.auth.CredentialsService;
+import com.ismile.core.chronovcscli.core.pull.PullResult;
+import com.ismile.core.chronovcscli.core.pull.PullService;
+import com.ismile.core.chronovcscli.remote.RemoteConfig;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import picocli.CommandLine.Command;
+
+import java.io.File;
+import java.nio.file.Files;
+import java.util.Optional;
+
+@Component
+@Command(
+        name = "pull",
+        description = "Fetch and integrate changes from remote repository"
+)
+@RequiredArgsConstructor
+@Slf4j
+public class PullCommand implements Runnable {
+
+    private final PullService pullService;
+    private final CredentialsService credentialsService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Override
+    public void run() {
+        try {
+            File projectRoot = new File(".").getAbsoluteFile();
+
+            // 1. Check if .vcs exists
+            File vcsDir = new File(projectRoot, ".vcs");
+            if (!vcsDir.exists()) {
+                System.out.println("Error: Not a ChronoVCS repository");
+                System.out.println("Run 'chronovcs init' or 'chronovcs clone' first");
+                return;
+            }
+
+            // 2. Load remote config
+            File remoteFile = new File(projectRoot, ".vcs/remote");
+            if (!remoteFile.exists()) {
+                System.out.println("Error: No remote configured");
+                System.out.println("Run 'chronovcs remote-config <url> <repo-key>' first");
+                return;
+            }
+
+            String remoteJson = Files.readString(remoteFile.toPath());
+            RemoteConfig remoteConfig = objectMapper.readValue(remoteJson, RemoteConfig.class);
+
+            // 3. Load credentials
+            Optional<CredentialsEntry> credsOpt = credentialsService.findForServer(remoteConfig.getBaseUrl());
+            if (credsOpt.isEmpty()) {
+                System.out.println("Error: No credentials found for " + remoteConfig.getBaseUrl());
+                System.out.println("Run 'chronovcs login' first");
+                return;
+            }
+
+            CredentialsEntry credentials = credsOpt.get();
+
+            // 4. Execute pull
+            System.out.println("Pulling from " + remoteConfig.getBaseUrl() + "/" + remoteConfig.getRepoKey() + "...");
+
+            PullResult result = pullService.pull(projectRoot, remoteConfig, credentials);
+
+            // 5. Display result
+            if (result.isSuccess()) {
+                System.out.println(result.getMessage());
+                if (result.getCommitsDownloaded() > 0) {
+                    System.out.println("Downloaded " + result.getCommitsDownloaded() + " new commit(s)");
+                }
+                System.out.println("Pull successful!");
+            } else {
+                System.out.println("Pull failed:");
+                System.out.println(result.getMessage());
+            }
+
+        } catch (Exception e) {
+            log.error("Pull command failed", e);
+            System.out.println("Error: Pull failed - " + e.getMessage());
+        }
+    }
+}

@@ -1,17 +1,14 @@
 package com.ismile.core.chronovcs.security;
 
+import com.ismile.core.chronovcs.config.security.ChronoUserPrincipal;
 import com.ismile.core.chronovcs.entity.UserEntity;
 import com.ismile.core.chronovcs.repository.UserRepository;
+import com.ismile.core.chronovcs.service.auth.AuthenticatedUser;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-
-import java.util.Collection;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -21,25 +18,23 @@ public class ChronoUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        // 1. Useri email-ə görə tapırıq
         UserEntity user = userRepository
-                .findByEmailAndIsActiveTrue(email)
+                .findByEmailAndActiveTrue(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found or inactive: " + email));
 
-        // Hazırda “password” kimi tokenHash istifadə edirik
-        String passwordHash = user.getTokenHash();
+        // 2. UserEntity-ni AuthenticatedUser DTO-sunu çeviririk
+        AuthenticatedUser authUser = AuthenticatedUser.fromEntity(user);
 
-        Collection<? extends GrantedAuthority> authorities = List.of(
-                new SimpleGrantedAuthority("ROLE_USER")
-        );
-
-        return new org.springframework.security.core.userdetails.User(
-                user.getEmail(),
-                passwordHash,
-                user.isActive(),
-                true,
-                true,
-                true,
-                authorities
-        );
+        // 3. ChronoUserPrincipal qaytarırıq.
+        // DİQQƏT: Normalda ChronoUserPrincipal parolu null qaytarır (təhlükəsizlik üçün).
+        // Amma burada Login prosesi getdiyi üçün, Spring Security parolu yoxlamalıdır.
+        // Ona görə də anonim klass ilə getPassword() metodunu override edirik.
+        return new ChronoUserPrincipal(authUser) {
+            @Override
+            public String getPassword() {
+                return user.getPasswordHash(); // Bazadakı BCrypt hash
+            }
+        };
     }
 }

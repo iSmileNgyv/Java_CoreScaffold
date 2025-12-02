@@ -35,4 +35,7 @@ out/
 
 ### VS Code ###
 .vscode/
-.vcs/
+*.jar
+*.war
+*.zip
+*.class

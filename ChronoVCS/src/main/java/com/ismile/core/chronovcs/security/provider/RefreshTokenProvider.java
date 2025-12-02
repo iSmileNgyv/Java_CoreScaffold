@@ -1,6 +1,7 @@
 package com.ismile.core.chronovcs.security.provider;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 import java.security.SecureRandom;
 import java.util.Base64;
@@ -12,6 +13,7 @@ import java.util.Base64;
  * Format: Base64 random string
  * Nümunə: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2
  */
+@Component
 @Slf4j
 public class RefreshTokenProvider {
 

@@ -6,6 +6,7 @@ import com.ismile.core.chronovcs.entity.RepositoryEntity;
 import com.ismile.core.chronovcs.service.auth.AuthenticatedUser;
 import com.ismile.core.chronovcs.service.permission.PermissionService;
 import com.ismile.core.chronovcs.service.repository.RepositoryService;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +18,7 @@ public class PushService {
     private final PermissionService permissionService;
     private final VersioningPushStrategyRegistry strategyRegistry;
 
+    @Transactional
     public PushResultDto push(
             AuthenticatedUser user,
             String repoKey,

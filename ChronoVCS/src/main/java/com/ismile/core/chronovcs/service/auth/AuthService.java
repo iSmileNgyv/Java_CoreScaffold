@@ -1,234 +1,128 @@
 package com.ismile.core.chronovcs.service.auth;
 
-import com.ismile.core.chronovcs.dto.auth.*;
-import com.ismile.core.chronovcs.entity.AuthLogEntity;
+import com.ismile.core.chronovcs.config.security.ChronoUserPrincipal;
+import com.ismile.core.chronovcs.dto.auth.LoginRequest;
+import com.ismile.core.chronovcs.dto.auth.LoginResponse;
 import com.ismile.core.chronovcs.entity.RefreshTokenEntity;
 import com.ismile.core.chronovcs.entity.UserEntity;
-import com.ismile.core.chronovcs.repository.AuthLogRepository;
 import com.ismile.core.chronovcs.repository.RefreshTokenRepository;
 import com.ismile.core.chronovcs.repository.UserRepository;
-import com.ismile.core.chronovcs.security.provider.JwtTokenProvider;
 import com.ismile.core.chronovcs.security.provider.RefreshTokenProvider;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.Base64;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class AuthService {
 
     private final UserRepository userRepository;
-    private final RefreshTokenRepository refreshTokenRepository;
-    private final AuthLogRepository authLogRepository;
+    private final RefreshTokenRepository refreshTokenRepository; // Yeni
     private final PasswordEncoder passwordEncoder;
-    private final JwtTokenProvider jwtTokenProvider;
-    private final RefreshTokenProvider refreshTokenProvider;
+    private final JwtTokenService jwtTokenService;
+    private final RefreshTokenProvider refreshTokenProvider; // Yeni
 
-    @Value("${chronovcs.jwt.refresh-token-validity-days:7}")
-    private int refreshTokenValidityDays;
-
-    @Value("${chronovcs.jwt.access-token-validity-minutes:15}")
-    private long accessTokenValidityMinutes;
-
-    /**
-     * Register new user
-     */
     @Transactional
-    public LoginResponse register(RegisterRequest request, String ipAddress, String userAgent) {
-        // Validate email not exists
-        if (userRepository.existsByEmailIgnoreCase(request.getEmail())) {
-            throw new IllegalArgumentException("Email already registered");
+    public LoginResponse login(LoginRequest request) {
+        // 1. Useri tap
+        UserEntity user = userRepository.findByEmailAndActiveTrue(request.getEmail())
+                .orElseThrow(() -> new BadCredentialsException("User not found"));
+
+        // 2. Parolu yoxla
+        if (user.getPasswordHash() == null ||
+                !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            throw new BadCredentialsException("Invalid password");
         }
 
-        // Create user
-        UserEntity user = UserEntity.builder()
-                .email(request.getEmail().toLowerCase())
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .displayName(request.getDisplayName())
-                .active(true)
-                .emailVerified(false) // Email verification can be added later
-                .build();
+        // 3. Access Token yarat (JWT)
+        AuthenticatedUser authUser = AuthenticatedUser.fromEntity(user);
+        String accessToken = jwtTokenService.generateAccessToken(new ChronoUserPrincipal(authUser));
 
-        user = userRepository.save(user);
+        // 4. Refresh Token yarat (Random String)
+        String rawRefreshToken = refreshTokenProvider.generateToken();
 
-        log.info("User registered: {} ({})", user.getEmail(), user.getUserUid());
+        // 5. Refresh Token-i Hash-lə və Bazada saxla
+        // Qeyd: Refresh Tokenləri BCrypt ilə yox, sürətli olsun deyə SHA-256 ilə hash-ləyirik
+        String tokenHash = hashToken(rawRefreshToken);
 
-        // Auto-login after registration
-        return generateLoginResponse(user, ipAddress, userAgent);
-    }
-
-    /**
-     * Login with email and password
-     */
-    @Transactional
-    public LoginResponse login(LoginRequest request, String ipAddress, String userAgent) {
-        // Find user
-        UserEntity user = userRepository.findByEmailIgnoreCaseAndActiveTrue(request.getEmail())
-                .orElse(null);
-
-        // Validate password
-        if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            // Log failed attempt
-            authLogRepository.save(
-                    AuthLogEntity.loginFailed(request.getEmail(), ipAddress, userAgent, "Invalid credentials")
-            );
-            throw new IllegalArgumentException("Invalid email or password");
-        }
-
-        // Log successful login
-        authLogRepository.save(
-                AuthLogEntity.loginSuccess(user, ipAddress, userAgent)
-        );
-
-        log.info("User logged in: {} from IP: {}", user.getEmail(), ipAddress);
-
-        return generateLoginResponse(user, ipAddress, userAgent);
-    }
-
-    /**
-     * Refresh access token using refresh token
-     */
-    @Transactional
-    public LoginResponse refresh(RefreshRequest request, String ipAddress, String userAgent) {
-        // Hash the incoming refresh token
-        String tokenHash = hashSha256(request.getRefreshToken());
-
-        // Find refresh token
-        RefreshTokenEntity refreshToken = refreshTokenRepository.findByTokenHash(tokenHash)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid refresh token"));
-
-        // Validate token
-        if (!refreshToken.isValid()) {
-            throw new IllegalArgumentException("Refresh token expired or revoked");
-        }
-
-        UserEntity user = refreshToken.getUser();
-
-        // Update last used
-        refreshToken.setLastUsedAt(LocalDateTime.now());
-        refreshTokenRepository.save(refreshToken);
-
-        // Generate new tokens (rotation strategy - old refresh token gets revoked)
-        refreshToken.revoke();
-        refreshTokenRepository.save(refreshToken);
-
-        log.info("Token refreshed for user: {}", user.getEmail());
-
-        return generateLoginResponse(user, ipAddress, userAgent);
-    }
-
-    /**
-     * Logout (revoke refresh token)
-     */
-    @Transactional
-    public void logout(String refreshToken) {
-        String tokenHash = hashSha256(refreshToken);
-
-        refreshTokenRepository.findByTokenHash(tokenHash)
-                .ifPresent(token -> {
-                    token.revoke();
-                    refreshTokenRepository.save(token);
-                    log.info("User logged out: {}", token.getUser().getEmail());
-                });
-    }
-
-    /**
-     * Logout from all devices (revoke all refresh tokens)
-     */
-    @Transactional
-    public void logoutAll(UserEntity user) {
-        refreshTokenRepository.revokeAllByUser(user, LocalDateTime.now());
-        log.info("User logged out from all devices: {}", user.getEmail());
-    }
-
-    /**
-     * Generate login response with access token and refresh token
-     */
-    private LoginResponse generateLoginResponse(UserEntity user, String ipAddress, String userAgent) {
-        // Generate access token (JWT)
-        String accessToken = jwtTokenProvider.generateAccessToken(
-                user.getId(),
-                user.getUserUid(),
-                user.getEmail()
-        );
-
-        // Generate refresh token
-        String refreshToken = refreshTokenProvider.generateRefreshToken();
-        String refreshTokenHash = hashSha256(refreshToken);
-
-        // Save refresh token to DB
         RefreshTokenEntity refreshTokenEntity = RefreshTokenEntity.builder()
                 .user(user)
-                .tokenHash(refreshTokenHash)
-                .deviceInfo(extractDeviceInfo(userAgent))
-                .ipAddress(ipAddress)
-                .userAgent(userAgent)
-                .expiresAt(LocalDateTime.now().plusDays(refreshTokenValidityDays))
+                .tokenHash(tokenHash)
+                .expiresAt(LocalDateTime.now().plusDays(7)) // 7 gün vaxt
                 .build();
 
         refreshTokenRepository.save(refreshTokenEntity);
 
-        // Build user DTO
-        UserDto userDto = UserDto.builder()
-                .id(user.getId())
-                .userUid(user.getUserUid())
-                .email(user.getEmail())
-                .displayName(user.getDisplayName())
-                .active(user.isActive())
-                .emailVerified(user.isEmailVerified())
-                .build();
-
+        // 6. Cavabı qaytar
         return LoginResponse.builder()
                 .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .tokenType("Bearer")
-                .expiresIn(accessTokenValidityMinutes * 60) // Convert to seconds
-                .user(userDto)
+                .refreshToken(rawRefreshToken) // Userə originalı veririk
+                .email(user.getEmail())
+                .userUid(user.getUserUid())
                 .build();
     }
 
-    /**
-     * Hash string with SHA-256
-     */
-    private String hashSha256(String input) {
+    // SHA-256 Hashing Helper
+    private String hashToken(String token) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
             return Base64.getEncoder().encodeToString(hash);
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 algorithm not available", e);
+        } catch (Exception e) {
+            throw new RuntimeException("Error hashing refresh token", e);
         }
     }
 
-    /**
-     * Extract device info from user agent (simple version)
-     */
-    private String extractDeviceInfo(String userAgent) {
-        if (userAgent == null || userAgent.isBlank()) {
-            return "Unknown device";
+    @Transactional
+    public LoginResponse refresh(String rawRefreshToken) {
+        // 1. Gələn tokeni hash-lə
+        String tokenHash = hashToken(rawRefreshToken);
+
+        // 2. Bazadan tap
+        RefreshTokenEntity tokenEntity = refreshTokenRepository.findByTokenHash(tokenHash)
+                .orElseThrow(() -> new BadCredentialsException("Invalid refresh token"));
+
+        // 3. Validasiya (Vaxtı keçibmi? Revoke olubmu?)
+        if (!tokenEntity.isValid()) {
+            throw new BadCredentialsException("Refresh token expired or revoked");
         }
 
-        // Simple extraction - can be improved with user-agent parser library
-        if (userAgent.contains("Chrome")) {
-            return "Chrome Browser";
-        } else if (userAgent.contains("Firefox")) {
-            return "Firefox Browser";
-        } else if (userAgent.contains("Safari")) {
-            return "Safari Browser";
-        } else if (userAgent.contains("Edge")) {
-            return "Edge Browser";
-        }
+        UserEntity user = tokenEntity.getUser();
 
-        return "Unknown Browser";
+        // 4. Token Rotation (Köhnəni revoke et, yenisini yarat)
+        // Köhnəni "işlənmiş" kimi işarələyirik
+        tokenEntity.setRevokedAt(LocalDateTime.now());
+        refreshTokenRepository.save(tokenEntity);
+
+        // Yeni Refresh Token yarad
+        String newRawRefreshToken = refreshTokenProvider.generateToken();
+        String newTokenHash = hashToken(newRawRefreshToken);
+
+        RefreshTokenEntity newRefreshTokenEntity = RefreshTokenEntity.builder()
+                .user(user)
+                .tokenHash(newTokenHash)
+                .expiresAt(LocalDateTime.now().plusDays(7))
+                .build();
+
+        refreshTokenRepository.save(newRefreshTokenEntity);
+
+        // 5. Yeni Access Token yarad
+        AuthenticatedUser authUser = AuthenticatedUser.fromEntity(user);
+        String newAccessToken = jwtTokenService.generateAccessToken(new ChronoUserPrincipal(authUser));
+
+        // 6. Cavabı qaytar
+        return LoginResponse.builder()
+                .accessToken(newAccessToken)
+                .refreshToken(newRawRefreshToken)
+                .email(user.getEmail())
+                .userUid(user.getUserUid())
+                .build();
     }
 }

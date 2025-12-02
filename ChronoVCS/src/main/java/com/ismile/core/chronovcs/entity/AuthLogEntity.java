@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
  * Security audit trail - bütün auth event-lərini log edir
  */
 @Entity
-@Table(name = "auth_logs")
+@Table(name = "chronovcs_auth_logs")
 @Getter
 @Setter
 @NoArgsConstructor

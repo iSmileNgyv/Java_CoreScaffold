@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
  * JWT refresh token-ları üçün (Next.js)
  */
 @Entity
-@Table(name = "refresh_tokens")
+@Table(name = "chronovcs_refresh_tokens")
 @Getter
 @Setter
 @NoArgsConstructor

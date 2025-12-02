@@ -10,7 +10,7 @@ import picocli.CommandLine.Command;
         version = "1.0.0",
         description = "${cli.appName}",      // from application.yml
         subcommands = {
-                InitCommand.class,           // we will create next
+                InitCommand.class,
                 CommitCommand.class,
                 StatusCommand.class,
                 AddCommand.class,
@@ -19,10 +19,10 @@ import picocli.CommandLine.Command;
                 LoginCommand.class,
                 PushCommand.class,
                 CloneCommand.class,
-                PullCommand.class
-                // FetchCommand.class,
-                // BranchCommand.class,
-                // CheckoutCommand.class
+                PullCommand.class,
+                BranchCommand.class,
+                CheckoutCommand.class
+                // FetchCommand.class
         }
 )
 public class ChronoCommand {

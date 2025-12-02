@@ -17,7 +17,8 @@ import picocli.CommandLine.Command;
                 RemoteHandshakeCommand.class,
                 RemoteConfigCommand.class,
                 LoginCommand.class,
-                PushCommand.class
+                PushCommand.class,
+                CloneCommand.class
                 // PullCommand.class,
                 // FetchCommand.class,
                 // BranchCommand.class,

@@ -21,8 +21,8 @@ import picocli.CommandLine.Command;
                 CloneCommand.class,
                 PullCommand.class,
                 BranchCommand.class,
-                CheckoutCommand.class
-                // FetchCommand.class
+                CheckoutCommand.class,
+                FetchCommand.class
         }
 )
 public class ChronoCommand {

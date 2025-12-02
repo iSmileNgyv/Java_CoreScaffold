@@ -67,7 +67,7 @@ public class LocalCommitReader {
             return null;
         }
 
-        File commitFile = new File(projectRoot, ".vcs/commits/" + commitHash);
+        File commitFile = new File(projectRoot, ".vcs/commits/" + commitHash + ".json");
         if (!commitFile.exists()) {
             log.warn("Commit file not found: {}", commitHash);
             return null;
@@ -110,7 +110,7 @@ public class LocalCommitReader {
             return false;
         }
 
-        File commitFile = new File(projectRoot, ".vcs/commits/" + commitHash);
+        File commitFile = new File(projectRoot, ".vcs/commits/" + commitHash + ".json");
         return commitFile.exists();
     }
 }

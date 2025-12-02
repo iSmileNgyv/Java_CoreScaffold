@@ -38,6 +38,12 @@ public class BranchCommand implements Runnable {
     @Option(names = {"-m", "--move"}, description = "Rename branch")
     private boolean rename;
 
+    @Option(names = {"-r", "--remotes"}, description = "List remote branches")
+    private boolean showRemotes;
+
+    @Option(names = {"-a", "--all"}, description = "List both local and remote branches")
+    private boolean showAll;
+
     @Override
     public void run() {
         try {
@@ -83,14 +89,37 @@ public class BranchCommand implements Runnable {
             }
 
             // List branches (default)
-            List<BranchInfo> branches = branchService.listBranches(projectRoot);
+            if (showRemotes || showAll) {
+                listRemoteBranches(projectRoot, showAll);
+            } else {
+                List<BranchInfo> branches = branchService.listBranches(projectRoot);
 
-            if (branches.isEmpty()) {
-                System.out.println("No branches found");
-                return;
+                if (branches.isEmpty()) {
+                    System.out.println("No branches found");
+                    return;
+                }
+
+                for (BranchInfo branch : branches) {
+                    String marker = branch.isCurrent() ? "* " : "  ";
+                    String commitInfo = branch.getCommitHash() != null
+                            ? " -> " + branch.getCommitHash().substring(0, Math.min(7, branch.getCommitHash().length()))
+                            : "";
+
+                    System.out.println(marker + branch.getName() + commitInfo);
+                }
             }
 
-            for (BranchInfo branch : branches) {
+        } catch (Exception e) {
+            log.error("Branch command failed", e);
+            System.out.println("Error: " + e.getMessage());
+        }
+    }
+
+    private void listRemoteBranches(File projectRoot, boolean showAll) throws Exception {
+        // List local branches if showAll
+        if (showAll) {
+            List<BranchInfo> localBranches = branchService.listBranches(projectRoot);
+            for (BranchInfo branch : localBranches) {
                 String marker = branch.isCurrent() ? "* " : "  ";
                 String commitInfo = branch.getCommitHash() != null
                         ? " -> " + branch.getCommitHash().substring(0, Math.min(7, branch.getCommitHash().length()))
@@ -98,10 +127,36 @@ public class BranchCommand implements Runnable {
 
                 System.out.println(marker + branch.getName() + commitInfo);
             }
+        }
 
-        } catch (Exception e) {
-            log.error("Branch command failed", e);
-            System.out.println("Error: " + e.getMessage());
+        // List remote branches
+        File remotesDir = new File(projectRoot, ".vcs/refs/remotes/origin");
+        if (!remotesDir.exists() || !remotesDir.isDirectory()) {
+            if (!showAll) {
+                System.out.println("No remote branches found.");
+                System.out.println("Run 'chronovcs fetch' to fetch remote branches.");
+            }
+            return;
+        }
+
+        File[] remoteRefs = remotesDir.listFiles();
+        if (remoteRefs == null || remoteRefs.length == 0) {
+            if (!showAll) {
+                System.out.println("No remote branches found.");
+            }
+            return;
+        }
+
+        for (File refFile : remoteRefs) {
+            if (refFile.isFile()) {
+                String branchName = refFile.getName();
+                String commitHash = java.nio.file.Files.readString(refFile.toPath()).trim();
+                String commitInfo = commitHash.length() >= 7
+                        ? " -> " + commitHash.substring(0, 7)
+                        : " -> " + commitHash;
+
+                System.out.println("  remotes/origin/" + branchName + commitInfo);
+            }
         }
     }
 }

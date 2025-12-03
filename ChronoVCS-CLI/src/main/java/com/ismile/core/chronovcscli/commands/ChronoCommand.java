@@ -14,6 +14,7 @@ import picocli.CommandLine.Command;
                 CommitCommand.class,
                 StatusCommand.class,
                 AddCommand.class,
+                DiffCommand.class,
                 RemoteHandshakeCommand.class,
                 RemoteConfigCommand.class,
                 LoginCommand.class,

@@ -5,9 +5,9 @@ import com.ismile.core.chronovcscli.core.commit.CommitModel;
 import com.ismile.core.chronovcscli.core.diff.DiffEngine;
 import com.ismile.core.chronovcscli.core.diff.DiffResult;
 import com.ismile.core.chronovcscli.core.diff.FileDiff;
+import com.ismile.core.chronovcscli.core.hash.HashEngine;
 import com.ismile.core.chronovcscli.core.index.IndexEngine;
 import com.ismile.core.chronovcscli.core.objectsStore.ObjectStore;
-import com.ismile.core.chronovcscli.utils.HashUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -22,6 +22,7 @@ public class DiffEngineImpl implements DiffEngine {
     private final IndexEngine indexEngine;
     private final ObjectStore objectStore;
     private final VcsDirectoryManager vcsDirectoryManager;
+    private final HashEngine hashEngine;
 
     @Override
     public DiffResult diffWorkingVsStaged(File projectRoot) throws IOException {
@@ -43,7 +44,7 @@ public class DiffEngineImpl implements DiffEngine {
                 fileDiffs.add(new FileDiff(relativePath, FileDiff.ChangeType.DELETED, hunks));
             } else {
                 // Check if modified
-                String workingHash = HashUtils.sha256(workingFile);
+                String workingHash = hashEngine.hashFile(workingFile);
                 if (!workingHash.equals(stagedHash)) {
                     byte[] stagedContent = objectStore.readBlob(stagedHash);
                     byte[] workingContent = Files.readAllBytes(workingFile.toPath());

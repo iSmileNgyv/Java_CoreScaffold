@@ -1,0 +1,280 @@
+# ArgusOmni Test Suite for ChronoVCS
+# Tests the complete VCS workflow: init, add, commit, push, clone
+
+env:
+  base_url: "http://localhost:8081"
+  grpc_host: "localhost:50051"
+  test_repo_path: "/tmp/test-repo"
+  clone_path: "/tmp/test-clone"
+
+variables:
+  email: "admin@chrono.vcs"
+  password: "admin123"
+  repo_name: "test-repository"
+
+tests:
+  # ==========================================
+  # 1. Authentication Tests
+  # ==========================================
+
+  - name: "Login to ChronoVCS via REST"
+    rest:
+      url: "{{base_url}}/api/auth/login"
+      method: POST
+      headers:
+        Content-Type: "application/json"
+      body:
+        email: "{{email}}"
+        password: "{{password}}"
+    extract:
+      accessToken: "$.accessToken"
+      refreshToken: "$.refreshToken"
+      userUid: "$.userUid"
+    expect:
+      status: 200
+      jsonContains:
+        email: "{{email}}"
+
+  - name: "Create CLI Token (PAT)"
+    rest:
+      url: "{{base_url}}/api/auth/tokens"
+      method: POST
+      headers:
+        Authorization: "Bearer {{accessToken}}"
+        Content-Type: "application/json"
+      body:
+        tokenName: "CLI Test Token"
+        expiresInDays: 90
+    extract:
+      cliToken: "$.rawToken"
+      tokenId: "$.id"
+    expect:
+      status: 200
+      jsonContains:
+        tokenName: "CLI Test Token"
+
+  - name: "Prepare Basic Auth credentials"
+    set:
+      variables:
+        basicAuthCredentials: "{{email}}:{{cliToken}}"
+
+  - name: "Verify CLI token is valid with Basic Auth"
+    rest:
+      url: "{{base_url}}/api/auth/self"
+      method: GET
+      headers:
+        Authorization: "Basic {{base64:basicAuthCredentials}}"
+    expect:
+      status: 200
+      jsonContains:
+        email: "{{email}}"
+
+  # ==========================================
+  # 2. Repository Creation Tests
+  # ==========================================
+
+  - name: "Create new repository"
+    rest:
+      url: "{{base_url}}/api/repositories"
+      method: POST
+      headers:
+        Authorization: "Basic {{base64:basicAuthCredentials}}"
+        Content-Type: "application/json"
+      body:
+        name: "{{repo_name}}"
+        versioningMode: "project"
+    extract:
+      repoId: "$.id"
+      repoKey: "$.key"
+    expect:
+      status: 201
+      json:
+        name: "{{repo_name}}"
+
+  - name: "Verify repository created"
+    rest:
+      url: "{{base_url}}/api/repositories/{{repoKey}}/info"
+      method: GET
+      headers:
+        Authorization: "Basic {{base64:basicAuthCredentials}}"
+    expect:
+      status: 200
+      json:
+        key: "{{repoKey}}"
+
+  # ==========================================
+  # 3. File System - Init Local Repository
+  # ==========================================
+
+  - name: "Create test directory"
+    set:
+      variables:
+        test_file_path: "{{test_repo_path}}/README.md"
+
+  - name: "Verify test directory exists"
+    fs:
+      exists: "{{test_repo_path}}"
+
+  - name: "Verify .vcs directory exists"
+    fs:
+      exists: "{{test_repo_path}}/.vcs"
+      isDirectory: "{{test_repo_path}}/.vcs"
+
+  # ==========================================
+  # 4. File Operations & Commit
+  # ==========================================
+
+  - name: "Verify test file exists"
+    fs:
+      exists: "{{test_file_path}}"
+
+  - name: "Generate file hash"
+    transform:
+      input: "test_file_path"
+      function: "file_hash"
+      output: "file_hash"
+
+  - name: "Verify file hash is valid"
+    set:
+      variables:
+        expected_hash_length: 64
+
+  # ==========================================
+  # 5. Push to Remote
+  # ==========================================
+
+  - name: "Handshake with remote repository"
+    rest:
+      url: "{{base_url}}/api/repositories/{{repoKey}}/handshake"
+      method: POST
+      headers:
+        Authorization: "Basic {{base64:basicAuthCredentials}}"
+        Content-Type: "application/json"
+      body:
+        clientVersion: "1.0.0"
+    extract:
+      serverVersion: "$.version"
+      permissions: "$.permissions"
+    expect:
+      status: 200
+      jsonContains:
+        permissions: {}
+
+  - name: "Push commits to remote"
+    rest:
+      url: "{{base_url}}/api/repositories/{{repoKey}}/push"
+      method: POST
+      headers:
+        Authorization: "Basic {{base64:basicAuthCredentials}}"
+        Content-Type: "application/json"
+      body:
+        branch: "main"
+        commits:
+          - id: "commit123"
+            message: "Initial commit"
+            timestamp: "{{date:yyyy-MM-dd'T'HH:mm:ss}}"
+            files:
+              "README.md": "{{file_hash}}"
+    extract:
+      pushStatus: "$.status"
+    expect:
+      status: 200
+
+  # ==========================================
+  # 6. Fetch & Verify Remote State
+  # ==========================================
+
+  - name: "Fetch repository refs"
+    rest:
+      url: "{{base_url}}/api/repositories/{{repoKey}}/refs"
+      method: GET
+      headers:
+        Authorization: "Basic {{base64:basicAuthCredentials}}"
+    extract:
+      mainBranch: "$.refs.main"
+    expect:
+      status: 200
+
+  - name: "Fetch commit history"
+    rest:
+      url: "{{base_url}}/api/repositories/{{repoKey}}/commits"
+      method: GET
+      headers:
+        Authorization: "Basic {{base64:basicAuthCredentials}}"
+    expect:
+      status: 200
+      jsonContains:
+        commits: {}
+
+  # ==========================================
+  # 7. Clone Tests
+  # ==========================================
+
+  - name: "Clone repository to new location"
+    rest:
+      url: "{{base_url}}/api/repositories/{{repoKey}}/clone"
+      method: POST
+      headers:
+        Authorization: "Basic {{base64:basicAuthCredentials}}"
+      body:
+        targetPath: "{{clone_path}}"
+    expect:
+      status: 200
+
+  - name: "Verify cloned directory exists"
+    fs:
+      exists: "{{clone_path}}"
+      isDirectory: "{{clone_path}}"
+
+  # ==========================================
+  # 8. Failure Cases (Error Handling)
+  # ==========================================
+
+  - name: "Test unauthorized access (should fail)"
+    rest:
+      url: "{{base_url}}/api/repositories/{{repoKey}}/info"
+      method: GET
+      headers:
+        Authorization: "Bearer invalid-token"
+    expect:
+      status: 401
+    continueOnError: true
+
+  - name: "Test non-existent repository (should fail)"
+    rest:
+      url: "{{base_url}}/api/repositories/non-existent-repo/info"
+      method: GET
+      headers:
+        Authorization: "Basic {{base64:basicAuthCredentials}}"
+    expect:
+      status: 404
+    continueOnError: true
+
+  - name: "Test file not found (should fail)"
+    fs:
+      notExists: "/invalid/path/to/file.txt"
+    continueOnError: true
+
+  # ==========================================
+  # 9. Path Resolution Tests
+  # ==========================================
+
+  - name: "Resolve logical path to physical"
+    resolvePath:
+      repoId: "{{repoId}}"
+      logicalPath: "README.md"
+      output: "physical_path"
+
+  - name: "Verify physical path exists"
+    fs:
+      exists: "{{physical_path}}"
+
+  # ==========================================
+  # 10. Summary & Cleanup
+  # ==========================================
+
+  - name: "Generate test summary"
+    set:
+      variables:
+        test_completion_time: "{{date:yyyy-MM-dd HH:mm:ss}}"
+        test_id: "{{uuid}}"

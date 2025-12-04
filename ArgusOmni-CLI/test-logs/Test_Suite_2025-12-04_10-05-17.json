@@ -1,0 +1,57 @@
+{
+  "testSuiteName" : "Test Suite",
+  "executionTime" : "2025-12-04T10:05:17.558789",
+  "totalTests" : 3,
+  "passedTests" : 2,
+  "failedTests" : 1,
+  "totalDurationMs" : 1414,
+  "steps" : [ {
+    "stepNumber" : 1,
+    "stepName" : "Login to ChronoVCS via REST",
+    "success" : true,
+    "durationMs" : 1183,
+    "statusCode" : 200,
+    "response" : {
+      "accessToken" : "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOjEsInN1YiI6ImFkbWluQGNocm9uby52Y3MiLCJpYXQiOjE3NjQ4MjgzMTcsImV4cCI6MTc2NDgyOTIxN30.t-Ei5tlHNZXzznInZJFJwI_Zn5RKjZh4fBxxuCxUJ8s",
+      "refreshToken" : "S8ZtRMxXL-mvWUdABDKZQYKIT7Fxc5xdYOdyrnhpg40",
+      "email" : "admin@chrono.vcs",
+      "userUid" : "uid-admin-001"
+    },
+    "extractedVariables" : {
+      "accessToken" : "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOjEsInN1YiI6ImFkbWluQGNocm9uby52Y3MiLCJpYXQiOjE3NjQ4MjgzMTcsImV4cCI6MTc2NDgyOTIxN30.t-Ei5tlHNZXzznInZJFJwI_Zn5RKjZh4fBxxuCxUJ8s",
+      "refreshToken" : "S8ZtRMxXL-mvWUdABDKZQYKIT7Fxc5xdYOdyrnhpg40",
+      "userUid" : "uid-admin-001"
+    },
+    "errorMessage" : null
+  }, {
+    "stepNumber" : 2,
+    "stepName" : "Create CLI Token (PAT)",
+    "success" : true,
+    "durationMs" : 212,
+    "statusCode" : 200,
+    "response" : {
+      "id" : 4,
+      "tokenName" : "CLI Test Token",
+      "rawToken" : "cvcs_Fzh9xpZBjT1jjYTEc4Mpouin4R8IoienNHFgpKaVC-o",
+      "tokenPrefix" : "cvcs_Fzh9x",
+      "expiresAt" : "2026-03-04T10:05:17.521139",
+      "createdAt" : "2025-12-04T10:05:17.52242",
+      "lastUsedAt" : null,
+      "revoked" : false
+    },
+    "extractedVariables" : {
+      "tokenId" : 4,
+      "cliToken" : "cvcs_Fzh9xpZBjT1jjYTEc4Mpouin4R8IoienNHFgpKaVC-o"
+    },
+    "errorMessage" : null
+  }, {
+    "stepNumber" : 3,
+    "stepName" : "Verify CLI token is valid",
+    "success" : false,
+    "durationMs" : 19,
+    "statusCode" : 401,
+    "response" : null,
+    "extractedVariables" : null,
+    "errorMessage" : "Assertions failed: [Status mismatch: expected 200, got 401, Cannot assert JSON contains: No response body (HTTP 401)]"
+  } ]
+}

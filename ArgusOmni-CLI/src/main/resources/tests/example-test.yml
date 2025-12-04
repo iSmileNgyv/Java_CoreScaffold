@@ -1,0 +1,61 @@
+env:
+  base_url: "http://localhost:8080"
+  grpc_host: "localhost:50051"
+
+variables:
+  test_user: "admin"
+  test_password: "1234"
+
+tests:
+  # Example 1: gRPC authentication
+  - name: "Login via gRPC"
+    grpc:
+      proto: "./protos/auth.proto"
+      host: "{{grpc_host}}"
+      service: "auth.AuthService"
+      method: "Login"
+      request:
+        username: "{{test_user}}"
+        password: "{{test_password}}"
+    extract:
+      token: "$.token"
+    expect:
+      json:
+        authenticated: true
+
+  # Example 2: REST API call with extracted token
+  - name: "Get user info via REST"
+    rest:
+      url: "{{base_url}}/api/users/me"
+      method: GET
+      headers:
+        Authorization: "Bearer {{token}}"
+    expect:
+      status: 200
+      json:
+        username: "{{test_user}}"
+
+  # Example 3: File system validation
+  - name: "Resolve repository path"
+    resolvePath:
+      repoId: "123"
+      logicalPath: "src/App.java"
+      output: "app_file_path"
+
+  - name: "Verify file exists"
+    fs:
+      exists: "{{app_file_path}}"
+
+  # Example 4: Variable transformation
+  - name: "Generate file hash"
+    transform:
+      input: "app_file_path"
+      function: "file_hash"
+      output: "app_file_hash"
+
+  # Example 5: Set custom variables
+  - name: "Set test metadata"
+    set:
+      variables:
+        test_id: "{{uuid}}"
+        timestamp: "{{date:yyyy-MM-dd HH:mm:ss}}"

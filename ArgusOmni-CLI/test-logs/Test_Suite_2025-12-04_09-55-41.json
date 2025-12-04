@@ -1,0 +1,18 @@
+{
+  "testSuiteName" : "Test Suite",
+  "executionTime" : "2025-12-04T09:55:41.606007",
+  "totalTests" : 1,
+  "passedTests" : 0,
+  "failedTests" : 1,
+  "totalDurationMs" : 187,
+  "steps" : [ {
+    "stepNumber" : 1,
+    "stepName" : "Login to ChronoVCS via REST",
+    "success" : false,
+    "durationMs" : 187,
+    "statusCode" : 0,
+    "response" : null,
+    "extractedVariables" : null,
+    "errorMessage" : "Assertions failed: [Status mismatch: expected 401, got 0, Cannot assert JSON: No response body (HTTP 0)]"
+  } ]
+}

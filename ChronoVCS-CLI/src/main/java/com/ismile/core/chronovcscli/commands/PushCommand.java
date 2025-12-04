@@ -7,10 +7,12 @@ import com.ismile.core.chronovcscli.core.commit.CommitModel;
 import com.ismile.core.chronovcscli.core.objectsStore.ObjectStore;
 import com.ismile.core.chronovcscli.remote.RemoteConfig;
 import com.ismile.core.chronovcscli.remote.RemoteConfigService;
+import com.ismile.core.chronovcscli.remote.RemoteCloneService;
 import com.ismile.core.chronovcscli.remote.RemotePushService;
 import com.ismile.core.chronovcscli.remote.dto.CommitSnapshotDto;
 import com.ismile.core.chronovcscli.remote.dto.PushRequestDto;
 import com.ismile.core.chronovcscli.remote.dto.PushResultDto;
+import com.ismile.core.chronovcscli.remote.dto.RefsResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import picocli.CommandLine.Command;
@@ -32,6 +34,7 @@ public class PushCommand implements Runnable {
     private final RemoteConfigService remoteConfigService;
     private final CredentialsService credentialsService;
     private final RemotePushService remotePushService;
+    private final RemoteCloneService remoteCloneService;
     private final ObjectStore objectStore;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -90,15 +93,17 @@ public class PushCommand implements Runnable {
                 }
             }
 
-            // 6) Push request DTO
+            // 6) Fetch remote HEAD to determine base commit
+            String remoteHead = getRemoteHead(remoteConfig, creds, headInfo.branch);
+
+            // 7) Push request DTO
             PushRequestDto pushRequest = new PushRequestDto();
             pushRequest.setBranch(headInfo.branch);
-            // hələlik remote HEAD-lə sync etmirik – baseCommitId null olsun
-            pushRequest.setBaseCommitId(null);
+            pushRequest.setBaseCommitId(remoteHead); // remote HEAD-i göndəririk
             pushRequest.setNewCommit(snapshot);
             pushRequest.setBlobs(blobMap);
 
-            // 7) Remote push
+            // 8) Remote push
             PushResultDto result = remotePushService.push(remoteConfig, creds, pushRequest);
 
             System.out.println("✅ Push successful!");
@@ -167,5 +172,15 @@ public class PushCommand implements Runnable {
             throw new IllegalStateException("Commit file not found: .vcs/commits/" + commitId + ".json");
         }
         return objectMapper.readValue(commitFile, CommitModel.class);
+    }
+
+    private String getRemoteHead(RemoteConfig remoteConfig, CredentialsEntry creds, String branch) {
+        try {
+            RefsResponseDto refs = remoteCloneService.getRefs(remoteConfig, creds);
+            return refs.getBranches().get(branch);
+        } catch (Exception e) {
+            // Remote branch doesn't exist yet - this is the first push
+            return null;
+        }
     }
 }

@@ -42,9 +42,25 @@ public class IgnoreEngineImpl implements IgnoreEngine {
 
     private boolean matches(IgnoreRule rule, String relativePath) {
         String pattern = rule.getPattern();
-        // directory rule: "node_modules/"
+
+        // directory rule: "node_modules/" or ".gradle"
         if(rule.isDirectoryRule()) {
-            return relativePath.startsWith(pattern.substring(0, pattern.length() - 1));
+            // Remove trailing slash
+            String dirName = pattern.substring(0, pattern.length() - 1);
+            return relativePath.equals(dirName) || relativePath.startsWith(dirName + "/");
+        }
+
+        // Check if pattern is a directory name without trailing slash (e.g., ".gradle", "build")
+        // Should match both the directory itself and all files/subdirectories under it
+        if(!pattern.contains("*") && !pattern.contains(".")) {
+            // Pattern like "build" or ".gradle" - directory name
+            return relativePath.equals(pattern) || relativePath.startsWith(pattern + "/");
+        }
+
+        // For patterns with dot but no extension wildcard (e.g., ".gradle", ".idea")
+        if(!pattern.contains("*") && pattern.startsWith(".") && !pattern.substring(1).contains(".")) {
+            // Hidden directory like ".gradle", ".idea"
+            return relativePath.equals(pattern) || relativePath.startsWith(pattern + "/");
         }
 
         // wildcard "*.log"
@@ -53,7 +69,7 @@ public class IgnoreEngineImpl implements IgnoreEngine {
             return relativePath.matches(regex);
         }
 
-        // exact match
+        // exact match (for specific files)
         return relativePath.equals(pattern);
     }
 }

@@ -1,9 +1,15 @@
 package com.ismile.core.chronovcscli.core;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ismile.core.chronovcscli.core.commit.CommitModel;
+
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 
 public class VcsDirectoryManager {
+
+    private static final ObjectMapper mapper = new ObjectMapper();
 
     public static void initRepository() throws Exception {
 
@@ -38,5 +44,14 @@ public class VcsDirectoryManager {
                 default_branch=main
                 versioning_mode=project
                 """);
+    }
+
+    public File getHeadFile(File projectRoot) {
+        return new File(projectRoot, ".vcs/HEAD");
+    }
+
+    public CommitModel readCommit(File projectRoot, String commitHash) throws IOException {
+        File commitFile = new File(projectRoot, ".vcs/commits/" + commitHash + ".json");
+        return mapper.readValue(commitFile, CommitModel.class);
     }
 }

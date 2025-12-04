@@ -1,0 +1,88 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.5.7'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.ismile.argusomni'
+version = '1.0.0'
+description = 'ArgusOmni-CLI - Universal Test Orchestrator'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Spring Boot
+    implementation 'org.springframework.boot:spring-boot-starter'
+
+    // CLI
+    implementation 'info.picocli:picocli:4.7.7'
+    implementation 'info.picocli:picocli-spring-boot-starter:4.7.7'
+
+    // YAML parsing
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+
+    // HTTP clients
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+    // gRPC
+    implementation 'io.grpc:grpc-netty:1.60.0'
+    implementation 'io.grpc:grpc-protobuf:1.60.0'
+    implementation 'io.grpc:grpc-stub:1.60.0'
+    implementation 'com.google.protobuf:protobuf-java:3.25.1'
+    implementation 'com.google.protobuf:protobuf-java-util:3.25.1'
+
+    // JSONPath
+    implementation 'com.jayway.jsonpath:json-path:2.9.0'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // Testing
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+// Avtomatik alias quraşdır
+task installAlias(type: Exec) {
+    group = 'installation'
+    description = 'Install argus alias in ~/.zshrc'
+    commandLine 'bash', '-c', """
+        JAR_PATH="${project.buildDir}/libs/ArgusOmni-CLI-1.0.0.jar"
+        if [ ! -f "\$JAR_PATH" ]; then
+            echo "❌ JAR yoxdur. Əvvəl build et."
+            exit 1
+        fi
+
+        # Köhnə alias-ı sil
+        sed -i.bak '/alias argus=/d' ~/.zshrc 2>/dev/null || true
+
+        # Yeni əlavə et
+        echo "alias argus='java -jar \"\$JAR_PATH\"'" >> ~/.zshrc
+
+        echo "✅ Alias quraşdırıldı!"
+        echo "Terminal-ı yenilə: source ~/.zshrc"
+    """
+}
+
+// Build edəndə avtomatik alias quraşdır
+build.finalizedBy installAlias

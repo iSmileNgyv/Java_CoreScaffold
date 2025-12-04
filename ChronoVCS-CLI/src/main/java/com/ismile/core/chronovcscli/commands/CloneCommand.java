@@ -147,7 +147,7 @@ public class CloneCommand implements Runnable {
                 """, defaultBranch);
         Files.writeString(configFile.toPath(), configContent);
 
-        File remoteFile = new File(targetDir, ".vcs/remote");
+        File remoteFile = new File(targetDir, ".vcs/remote.json");
         String remoteJson = objectMapper.writeValueAsString(config);
         Files.writeString(remoteFile.toPath(), remoteJson);
 
@@ -212,7 +212,7 @@ public class CloneCommand implements Runnable {
                 """, defaultBranch);
         Files.writeString(configFile.toPath(), configContent);
 
-        File remoteFile = new File(targetDir, ".vcs/remote");
+        File remoteFile = new File(targetDir, ".vcs/remote.json");
         String remoteJson = objectMapper.writeValueAsString(config);
         Files.writeString(remoteFile.toPath(), remoteJson);
 

@@ -1,0 +1,50 @@
+# Sadə test - Public API istifadə edir
+env:
+  api_url: "https://jsonplaceholder.typicode.com"
+
+variables:
+  test_name: "ArgusOmni Test"
+
+tests:
+  # Test 1: GET request
+  - name: "Get user by ID"
+    rest:
+      url: "{{api_url}}/users/1"
+      method: GET
+    extract:
+      username: "$.username"
+      email: "$.email"
+    expect:
+      status: 200
+
+  # Test 2: Variable istifadə
+  - name: "Set test variables"
+    set:
+      variables:
+        user_id: 1
+        post_count: 0
+
+  # Test 3: POST request simulation
+  - name: "Get posts"
+    rest:
+      url: "{{api_url}}/posts"
+      method: GET
+    expect:
+      status: 200
+
+  # Test 4: Variable transformation
+  - name: "Generate UUID"
+    set:
+      variables:
+        test_id: "test-123"
+        timestamp: "2025-12-03"
+
+  # Test 5: Extract və use
+  - name: "Get specific user"
+    rest:
+      url: "{{api_url}}/users/{{user_id}}"
+      method: GET
+    expect:
+      status: 200
+      json:
+        id: 1

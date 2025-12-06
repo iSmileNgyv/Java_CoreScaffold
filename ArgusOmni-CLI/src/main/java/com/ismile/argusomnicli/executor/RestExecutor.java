@@ -55,6 +55,42 @@ public class RestExecutor extends AbstractExecutor {
         // Parse cookie configuration
         CookieConfig cookieConfig = parseCookieConfig(config, context);
 
+        // Prepare request details for logging
+        Map<String, String> requestHeaders = new HashMap<>();
+        if (config.getHeaders() != null) {
+            config.getHeaders().forEach((key, value) -> {
+                String resolvedValue = variableResolver.resolve(value, context.getVariableContext());
+                requestHeaders.put(key, resolvedValue);
+            });
+        }
+
+        // Get cookies that will be sent
+        Map<String, String> requestCookies = new HashMap<>();
+        if (cookieConfig.isAutoEnabled()) {
+            @SuppressWarnings("unchecked")
+            Map<String, String> cookieJar = (Map<String, String>) context.getVariable("_cookie_jar");
+            if (cookieJar != null) {
+                requestCookies.putAll(cookieJar);
+            }
+        }
+        requestCookies.putAll(cookieConfig.getManualCookies());
+
+        // Get request body
+        Object requestBody = null;
+        if (config.getBody() != null) {
+            requestBody = variableResolver.resolveObject(config.getBody(), context.getVariableContext());
+        }
+
+        // Store request details in context for later use
+        ExecutionResult.RequestDetails requestDetails = ExecutionResult.RequestDetails.builder()
+                .url(url)
+                .method(method)
+                .headers(requestHeaders)
+                .cookies(requestCookies)
+                .body(requestBody)
+                .build();
+        context.setVariable("_last_request_details", requestDetails);
+
         try {
             // Build HTTP client with HTTP/2 support if needed
             HttpClient httpClient = HttpClient.create();
@@ -131,6 +167,19 @@ public class RestExecutor extends AbstractExecutor {
             // HTTP error response (4xx, 5xx)
             context.setVariable("_last_status_code", e.getStatusCode().value());
             context.setVariable("_last_error_type", "HTTP_ERROR");
+
+            // Parse error response body if available
+            String errorBody = e.getResponseBodyAsString();
+            if (errorBody != null && !errorBody.isEmpty()) {
+                try {
+                    Object errorResponse = objectMapper.readValue(errorBody, Object.class);
+                    context.setVariable("_last_response", errorResponse);
+                } catch (Exception parseEx) {
+                    // If JSON parsing fails, store as string
+                    context.setVariable("_last_response", errorBody);
+                }
+            }
+
             throw new Exception(String.format("HTTP %d: %s", e.getStatusCode().value(), e.getStatusText()));
 
         } catch (Exception e) {

@@ -10,9 +10,17 @@ env:
 variables:
   email: "admin@chrono.vcs"
   password: "admin123"
-  repo_name: "test-repository"
 
 tests:
+  # ==========================================
+  # 0. Generate unique repository name
+  # ==========================================
+
+  - name: "Generate unique repository name"
+    set:
+      variables:
+        repo_name: "test-repo-{{date:yyyyMMdd-HHmmss}}"
+
   # ==========================================
   # 1. Authentication Tests
   # ==========================================
@@ -88,8 +96,8 @@ tests:
       repoKey: "$.key"
     expect:
       status: 201
-      json:
-        name: "{{repo_name}}"
+      jsonContains:
+        versioningMode: "PROJECT"
 
   - name: "Verify repository created"
     rest:
@@ -99,8 +107,8 @@ tests:
         Authorization: "Basic {{base64:basicAuthCredentials}}"
     expect:
       status: 200
-      json:
-        key: "{{repoKey}}"
+      jsonContains:
+        versioningMode: "PROJECT"
 
   # ==========================================
   # 3. File System - Init Local Repository

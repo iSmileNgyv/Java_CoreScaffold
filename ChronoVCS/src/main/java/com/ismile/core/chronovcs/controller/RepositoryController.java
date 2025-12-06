@@ -6,6 +6,9 @@ import com.ismile.core.chronovcs.dto.clone.CommitHistoryResponseDto;
 import com.ismile.core.chronovcs.dto.clone.RefsResponseDto;
 import com.ismile.core.chronovcs.dto.handshake.HandshakeResponse;
 import com.ismile.core.chronovcs.dto.push.CommitSnapshotDto;
+import com.ismile.core.chronovcs.dto.repository.CreateRepositoryRequestDto;
+import com.ismile.core.chronovcs.dto.repository.CreateRepositoryResponseDto;
+import com.ismile.core.chronovcs.dto.repository.RepositoryInfoDto;
 import com.ismile.core.chronovcs.service.auth.AuthenticatedUser;
 import com.ismile.core.chronovcs.service.clone.CloneService;
 import com.ismile.core.chronovcs.service.permission.PermissionService;
@@ -25,14 +28,13 @@ public class RepositoryController {
     private final CloneService cloneService;
 
     @GetMapping("/{repoKey}/info")
-    public ResponseEntity<String> getRepoInfo(
+    public ResponseEntity<RepositoryInfoDto> getRepoInfo(
             @CurrentUser AuthenticatedUser user,
             @PathVariable String repoKey
     ) {
         permissionService.assertCanRead(user, repoKey);
-        return ResponseEntity.ok(
-                "Repo info for: " + repoKey + " (user: " + user.getUserUid() + ")"
-        );
+        RepositoryInfoDto info = repositoryService.getRepositoryInfo(repoKey);
+        return ResponseEntity.ok(info);
     }
 
     @GetMapping
@@ -40,6 +42,15 @@ public class RepositoryController {
             @CurrentUser AuthenticatedUser user
     ) {
         return ResponseEntity.ok("List of repositories for user: " + user.getUserUid());
+    }
+
+    @PostMapping
+    public ResponseEntity<CreateRepositoryResponseDto> createRepository(
+            @CurrentUser AuthenticatedUser user,
+            @RequestBody CreateRepositoryRequestDto request
+    ) {
+        CreateRepositoryResponseDto response = repositoryService.createRepository(user, request);
+        return ResponseEntity.status(201).body(response);
     }
 
     @PostMapping("/{repoKey}/handshake")

@@ -1,5 +1,6 @@
 package com.ismile.argusomnicli.executor;
 
+import com.ismile.argusomnicli.model.PerformanceMetrics;
 import lombok.Builder;
 import lombok.Data;
 
@@ -19,4 +20,16 @@ public class ExecutionResult {
     private String errorMessage;
     private Integer statusCode;
     private long durationMs;
+    private RequestDetails requestDetails;
+    private PerformanceMetrics performanceMetrics;
+
+    @Data
+    @Builder
+    public static class RequestDetails {
+        private String url;
+        private String method;
+        private Map<String, String> headers;
+        private Map<String, String> cookies;
+        private Object body;
+    }
 }

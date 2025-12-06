@@ -1,6 +1,7 @@
 package com.ismile.argusomnicli.executor;
 
 import com.ismile.argusomnicli.extractor.ResponseExtractor;
+import com.ismile.argusomnicli.model.PerformanceMetrics;
 import com.ismile.argusomnicli.model.TestStep;
 import com.ismile.argusomnicli.runner.ExecutionContext;
 import com.ismile.argusomnicli.variable.VariableResolver;
@@ -42,6 +43,18 @@ public abstract class AbstractExecutor implements TestExecutor {
                 statusCode = (Integer) statusCodeObj;
             }
 
+            // Get request details from context if available (set by REST executor)
+            ExecutionResult.RequestDetails requestDetails = null;
+            Object requestDetailsObj = context.getVariable("_last_request_details");
+            if (requestDetailsObj instanceof ExecutionResult.RequestDetails) {
+                requestDetails = (ExecutionResult.RequestDetails) requestDetailsObj;
+            }
+
+            // Build performance metrics
+            PerformanceMetrics performanceMetrics = PerformanceMetrics.builder()
+                    .durationMs(duration)
+                    .build();
+
             return ExecutionResult.builder()
                     .success(true)
                     .stepName(step.getName())
@@ -49,6 +62,8 @@ public abstract class AbstractExecutor implements TestExecutor {
                     .extractedVariables(extracted)
                     .statusCode(statusCode)
                     .durationMs(duration)
+                    .requestDetails(requestDetails)
+                    .performanceMetrics(performanceMetrics)
                     .build();
 
         } catch (Exception e) {
@@ -61,12 +76,30 @@ public abstract class AbstractExecutor implements TestExecutor {
                 statusCode = (Integer) statusCodeObj;
             }
 
+            // Get request details from context if available (set by REST executor)
+            ExecutionResult.RequestDetails requestDetails = null;
+            Object requestDetailsObj = context.getVariable("_last_request_details");
+            if (requestDetailsObj instanceof ExecutionResult.RequestDetails) {
+                requestDetails = (ExecutionResult.RequestDetails) requestDetailsObj;
+            }
+
+            // Get error response from context if available (set by REST executor on HTTP errors)
+            Object errorResponse = context.getVariable("_last_response");
+
+            // Build performance metrics for failed tests
+            PerformanceMetrics performanceMetrics = PerformanceMetrics.builder()
+                    .durationMs(duration)
+                    .build();
+
             return ExecutionResult.builder()
                     .success(false)
                     .stepName(step.getName())
                     .statusCode(statusCode)
+                    .response(errorResponse)
                     .errorMessage(e.getMessage())
                     .durationMs(duration)
+                    .requestDetails(requestDetails)
+                    .performanceMetrics(performanceMetrics)
                     .build();
         }
     }

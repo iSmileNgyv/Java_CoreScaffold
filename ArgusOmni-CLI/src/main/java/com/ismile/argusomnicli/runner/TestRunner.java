@@ -89,10 +89,12 @@ public class TestRunner {
                             .success(false)
                             .stepName(step.getName())
                             .statusCode(result.getStatusCode())
+                            .requestDetails(result.getRequestDetails())
                             .response(result.getResponse())
                             .extractedVariables(result.getExtractedVariables())
                             .errorMessage("Assertions failed: " + assertionResult.getFailures())
                             .durationMs(result.getDurationMs())
+                            .performanceMetrics(result.getPerformanceMetrics())
                             .build();
                 }
             }

@@ -93,6 +93,7 @@ public class TestExecutionLogger {
             stepLog.setSuccess(result.isSuccess());
             stepLog.setDurationMs(result.getDurationMs());
             stepLog.setStatusCode(result.getStatusCode());
+            stepLog.setRequest(result.getRequestDetails());
             stepLog.setResponse(result.getResponse());
             stepLog.setExtractedVariables(result.getExtractedVariables());
             stepLog.setErrorMessage(result.getErrorMessage());
@@ -122,6 +123,7 @@ public class TestExecutionLogger {
         private boolean success;
         private long durationMs;
         private Integer statusCode;
+        private ExecutionResult.RequestDetails request;
         private Object response;
         private Object extractedVariables;
         private String errorMessage;

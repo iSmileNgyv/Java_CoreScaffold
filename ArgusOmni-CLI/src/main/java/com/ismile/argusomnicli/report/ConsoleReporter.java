@@ -10,12 +10,14 @@ import java.util.List;
 /**
  * Console reporter implementation with colored output.
  * Follows Single Responsibility - only reports to console.
+ * Follows Dependency Inversion - depends on abstractions (ReportGenerator).
  */
 @Component
 @RequiredArgsConstructor
 public class ConsoleReporter implements Reporter {
 
     private final TestExecutionLogger executionLogger;
+    private final HtmlReportGenerator htmlReportGenerator;
 
     private static final String ANSI_RESET = "\u001B[0m";
     private static final String ANSI_GREEN = "\u001B[32m";
@@ -87,6 +89,12 @@ public class ConsoleReporter implements Reporter {
         String logPath = executionLogger.writeLog("Test Suite", results, "./test-logs");
         if (logPath != null) {
             System.out.println(ANSI_CYAN + "📄 Execution log: " + logPath + ANSI_RESET);
+        }
+
+        // Generate HTML report
+        String htmlReportPath = htmlReportGenerator.generateReport("Test Suite", results, "./test-reports");
+        if (htmlReportPath != null) {
+            System.out.println(ANSI_CYAN + "📊 HTML Report: " + htmlReportPath + ANSI_RESET);
         }
     }
 

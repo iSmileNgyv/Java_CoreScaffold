@@ -11,7 +11,7 @@ import java.util.Map;
  * Follows Encapsulation - immutable result object.
  */
 @Data
-@Builder
+@Builder(toBuilder = true)
 public class ExecutionResult {
     private boolean success;
     private String stepName;
@@ -22,6 +22,7 @@ public class ExecutionResult {
     private long durationMs;
     private RequestDetails requestDetails;
     private PerformanceMetrics performanceMetrics;
+    private boolean continueOnError; // If true, failure is expected and shouldn't count as critical
 
     @Data
     @Builder

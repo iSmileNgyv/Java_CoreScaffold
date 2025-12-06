@@ -36,8 +36,8 @@ public class AsserterImpl implements Asserter {
         if (expect.getJson() != null) {
             if (skipJsonAssertions) {
                 assertionResult.addFailure(
-                    String.format("Cannot assert JSON: No response body (HTTP %s)",
-                        result.getStatusCode() != null ? result.getStatusCode() : "error")
+                    String.format("Cannot assert JSON: No response body%s",
+                        result.getStatusCode() != null ? " (status: " + result.getStatusCode() + ")" : "")
                 );
             } else {
                 assertJsonEquals(result, expect.getJson(), assertionResult);
@@ -48,8 +48,8 @@ public class AsserterImpl implements Asserter {
         if (expect.getJsonContains() != null) {
             if (skipJsonAssertions) {
                 assertionResult.addFailure(
-                    String.format("Cannot assert JSON contains: No response body (HTTP %s)",
-                        result.getStatusCode() != null ? result.getStatusCode() : "error")
+                    String.format("Cannot assert JSON contains: No response body%s",
+                        result.getStatusCode() != null ? " (status: " + result.getStatusCode() + ")" : "")
                 );
             } else {
                 assertJsonContains(result, expect.getJsonContains(), assertionResult);
@@ -216,14 +216,14 @@ public class AsserterImpl implements Asserter {
     private boolean shouldSkipJsonAssertions(ExecutionResult result) {
         // Skip JSON assertions if:
         // 1. Response is null
-        // 2. AND status code is error (4xx, 5xx) or connection error (0)
+        // 2. AND status code indicates error (4xx, 5xx for REST) or no status code (for gRPC/other)
         if (result.getResponse() == null) {
             Integer statusCode = result.getStatusCode();
             if (statusCode == null || statusCode == 0) {
-                return true; // Connection error
+                return true; // Connection error or gRPC error (no HTTP status code)
             }
             if (statusCode >= 400) {
-                return true; // HTTP error (4xx, 5xx)
+                return true; // REST API error (4xx, 5xx)
             }
         }
         return false;

@@ -63,7 +63,7 @@ public class DynamicGrpcClient {
         DynamicMessage request = buildRequestMessage(methodDescriptor.getInputType(), requestData);
 
         // Create channel
-        Channel channel = ManagedChannelBuilder.forTarget(host)
+        io.grpc.ManagedChannel channel = ManagedChannelBuilder.forTarget(host)
                 .usePlaintext()
                 .build();
 
@@ -102,13 +102,24 @@ public class DynamicGrpcClient {
             callOptions = callOptions.withCallCredentials(credentials);
         }
 
-        // Execute call
+        // Execute call and ensure channel is properly closed
         try {
             DynamicMessage response = ClientCalls.blockingUnaryCall(channel, grpcMethod, callOptions, request);
             return JsonFormat.printer().print(response);
         } catch (Exception e) {
             throw new RuntimeException("gRPC call failed: " + e.getMessage() +
                 " (Service: " + fullServiceName + ", Method: " + methodName + ")", e);
+        } finally {
+            // Shutdown channel and release resources
+            channel.shutdown();
+            try {
+                if (!channel.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                    channel.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                channel.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
         }
     }
 

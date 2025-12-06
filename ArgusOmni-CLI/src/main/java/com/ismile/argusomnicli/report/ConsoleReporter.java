@@ -29,6 +29,7 @@ public class ConsoleReporter implements Reporter {
     private int totalTests = 0;
     private int passedTests = 0;
     private int failedTests = 0;
+    private int skippedTests = 0; // Tests with continueOnError that failed
 
     @Override
     public void reportStart(String suiteName) {
@@ -48,6 +49,14 @@ public class ConsoleReporter implements Reporter {
             passedTests++;
             System.out.println(ANSI_GREEN + "✓ " + result.getStepName() +
                     ANSI_RESET + ANSI_YELLOW + " (" + result.getDurationMs() + "ms)" + ANSI_RESET);
+        } else if (result.isContinueOnError()) {
+            // Failed but expected to continue - don't count as failure
+            skippedTests++;
+            System.out.println(ANSI_YELLOW + "⚠ " + result.getStepName() + " (expected failure)" +
+                    ANSI_RESET + ANSI_YELLOW + " (" + result.getDurationMs() + "ms)" + ANSI_RESET);
+            if (result.getErrorMessage() != null) {
+                System.out.println(ANSI_YELLOW + "  Warning: " + result.getErrorMessage() + ANSI_RESET);
+            }
         } else {
             failedTests++;
             System.out.println(ANSI_RED + "✗ " + result.getStepName() +
@@ -75,6 +84,9 @@ public class ConsoleReporter implements Reporter {
         System.out.println(ANSI_BLUE + "Total Tests: " + totalTests + ANSI_RESET);
         System.out.println(ANSI_GREEN + "Passed: " + passedTests + ANSI_RESET);
         System.out.println(ANSI_RED + "Failed: " + failedTests + ANSI_RESET);
+        if (skippedTests > 0) {
+            System.out.println(ANSI_YELLOW + "Skipped (Expected Failures): " + skippedTests + ANSI_RESET);
+        }
         System.out.println(ANSI_YELLOW + "Total Duration: " + totalDuration + "ms" + ANSI_RESET);
 
         System.out.println();

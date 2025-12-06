@@ -75,6 +75,7 @@ public class TestRunner {
                         .success(false)
                         .stepName(step.getName())
                         .errorMessage("No executor found for step type: " + step.getType())
+                        .continueOnError(step.isContinueOnError())
                         .build();
             }
 
@@ -95,17 +96,22 @@ public class TestRunner {
                             .errorMessage("Assertions failed: " + assertionResult.getFailures())
                             .durationMs(result.getDurationMs())
                             .performanceMetrics(result.getPerformanceMetrics())
+                            .continueOnError(step.isContinueOnError())
                             .build();
                 }
             }
 
-            return result;
+            // Set continueOnError flag on successful results too
+            return result.toBuilder()
+                    .continueOnError(step.isContinueOnError())
+                    .build();
 
         } catch (Exception e) {
             return ExecutionResult.builder()
                     .success(false)
                     .stepName(step.getName())
                     .errorMessage("Execution failed: " + e.getMessage())
+                    .continueOnError(step.isContinueOnError())
                     .build();
         }
     }

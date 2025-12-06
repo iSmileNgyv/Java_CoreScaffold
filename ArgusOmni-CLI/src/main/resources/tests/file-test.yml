@@ -1,0 +1,42 @@
+# Simple File System Test
+# Creates folder, creates file, writes content, verifies content
+
+env:
+  test_folder: "/tmp/argus-test-folder"
+  test_file: "/tmp/argus-test-folder/test-file.txt"
+  test_content: "Hello from ArgusOmni Test!"
+
+tests:
+  # 1. Create folder
+  - name: "Create test folder"
+    fs:
+      createDir: "{{test_folder}}"
+
+  # 2. Verify folder exists
+  - name: "Verify folder exists"
+    fs:
+      exists: "{{test_folder}}"
+      isDirectory: "{{test_folder}}"
+
+  # 3. Create file with content
+  - name: "Create file with content"
+    fs:
+      write:
+        path: "{{test_file}}"
+        content: "{{test_content}}"
+
+  # 4. Verify file exists
+  - name: "Verify file exists"
+    fs:
+      exists: "{{test_file}}"
+
+  # 5. Read file
+  - name: "Read file content"
+    fs:
+      read: "{{test_file}}"
+
+  # 6. Cleanup - delete test folder
+  - name: "Cleanup test folder"
+    fs:
+      deleteDir: "{{test_folder}}"
+    continueOnError: true

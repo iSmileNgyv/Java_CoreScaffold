@@ -1,0 +1,55 @@
+{
+  "testSuiteName" : "Test Suite",
+  "executionTime" : "2025-12-06T11:37:04.785311",
+  "totalTests" : 2,
+  "passedTests" : 0,
+  "failedTests" : 2,
+  "totalDurationMs" : 502,
+  "steps" : [ {
+    "stepNumber" : 1,
+    "stepName" : "Register - Empty credentials (should fail)",
+    "success" : false,
+    "durationMs" : 436,
+    "statusCode" : null,
+    "request" : {
+      "url" : "localhost:5051",
+      "method" : "gRPC: AuthService/Register",
+      "headers" : { },
+      "cookies" : null,
+      "body" : {
+        "password" : "",
+        "surname" : "",
+        "name" : "",
+        "phone_number" : "",
+        "email" : "",
+        "username" : ""
+      }
+    },
+    "response" : null,
+    "extractedVariables" : null,
+    "errorMessage" : "gRPC call failed: INVALID_ARGUMENT: Username cannot be empty (Service: auth.AuthService, Method: Register)"
+  }, {
+    "stepNumber" : 2,
+    "stepName" : "Register - New user",
+    "success" : false,
+    "durationMs" : 66,
+    "statusCode" : null,
+    "request" : {
+      "url" : "localhost:5051",
+      "method" : "gRPC: AuthService/Register",
+      "headers" : { },
+      "cookies" : null,
+      "body" : {
+        "password" : "Test123!@#",
+        "surname" : "TestUser",
+        "name" : "gRPC",
+        "phone_number" : "+994501112233",
+        "email" : "grpctest@example.com",
+        "username" : "grpctest_20251206113704"
+      }
+    },
+    "response" : null,
+    "extractedVariables" : null,
+    "errorMessage" : "Assertions failed: [Cannot assert JSON contains: No response body (HTTP error)]"
+  } ]
+}

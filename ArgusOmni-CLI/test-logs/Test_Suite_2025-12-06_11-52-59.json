@@ -1,0 +1,117 @@
+{
+  "testSuiteName" : "Test Suite",
+  "executionTime" : "2025-12-06T11:52:59.943888",
+  "totalTests" : 3,
+  "passedTests" : 2,
+  "failedTests" : 1,
+  "totalDurationMs" : 1987,
+  "steps" : [ {
+    "stepNumber" : 1,
+    "stepName" : "Register new user",
+    "success" : true,
+    "durationMs" : 1089,
+    "statusCode" : null,
+    "request" : {
+      "url" : "localhost:5051",
+      "method" : "gRPC: AuthService/Register",
+      "headers" : { },
+      "cookies" : null,
+      "body" : {
+        "password" : "Test123!@#",
+        "surname" : "Test",
+        "name" : "Metadata",
+        "phone_number" : "+994501115257",
+        "email" : "mt115257@example.com",
+        "username" : "mt115257"
+      }
+    },
+    "response" : {
+      "success" : true,
+      "message" : "Authentication successful",
+      "token" : "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiI4IiwidXNlcm5hbWUiOiJtdDExNTI1NyIsInJvbGVzIjpbIlVTRVIiXSwiaWF0IjoxNzY1MDA3NTc4LCJleHAiOjE3NjUwOTM5NzgsImlzcyI6ImF1dGgtc2VydmljZSJ9.c-j6KakHdIyLJgFJeKVIn6v8CMIUojwjWtIWA6xtb26pZhrNej4ixYjaUfV5dY9_3omOSLIUUId-gzV7SBln5Q",
+      "refreshToken" : "05a19c72-70d3-40d5-b620-5d811abe31a0",
+      "user" : {
+        "id" : 8,
+        "username" : "mt115257",
+        "name" : "Metadata",
+        "surname" : "Test",
+        "phoneNumber" : "+994501115257",
+        "roles" : [ "USER" ]
+      }
+    },
+    "extractedVariables" : {
+      "accessToken" : "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiI4IiwidXNlcm5hbWUiOiJtdDExNTI1NyIsInJvbGVzIjpbIlVTRVIiXSwiaWF0IjoxNzY1MDA3NTc4LCJleHAiOjE3NjUwOTM5NzgsImlzcyI6ImF1dGgtc2VydmljZSJ9.c-j6KakHdIyLJgFJeKVIn6v8CMIUojwjWtIWA6xtb26pZhrNej4ixYjaUfV5dY9_3omOSLIUUId-gzV7SBln5Q",
+      "refreshToken" : "05a19c72-70d3-40d5-b620-5d811abe31a0",
+      "username" : "mt115257"
+    },
+    "errorMessage" : null
+  }, {
+    "stepNumber" : 2,
+    "stepName" : "Login to get fresh tokens",
+    "success" : true,
+    "durationMs" : 746,
+    "statusCode" : null,
+    "request" : {
+      "url" : "localhost:5051",
+      "method" : "gRPC: AuthService/Login",
+      "headers" : { },
+      "cookies" : null,
+      "body" : {
+        "password" : "Test123!@#",
+        "username" : "mt115257"
+      }
+    },
+    "response" : {
+      "success" : true,
+      "message" : "Authentication successful",
+      "token" : "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiI4IiwidXNlcm5hbWUiOiJtdDExNTI1NyIsInJvbGVzIjpbIlVTRVIiXSwiaWF0IjoxNzY1MDA3NTc5LCJleHAiOjE3NjUwOTM5NzksImlzcyI6ImF1dGgtc2VydmljZSJ9.Oa4O37IQQIQRGoHOrB8ZMJdax4sMfXdrVL8ggsBZK8pebFv-90Azty7UnJJhtbiXyNsAJEySDwN5bxcvFYxPKQ",
+      "refreshToken" : "9fa343c1-3a3b-4dfb-b0a0-c95f9fcda388",
+      "user" : {
+        "id" : 8,
+        "username" : "mt115257",
+        "name" : "Metadata",
+        "surname" : "Test",
+        "phoneNumber" : "+994501115257",
+        "roles" : [ "USER" ]
+      }
+    },
+    "extractedVariables" : {
+      "accessToken" : "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiI4IiwidXNlcm5hbWUiOiJtdDExNTI1NyIsInJvbGVzIjpbIlVTRVIiXSwiaWF0IjoxNzY1MDA3NTc5LCJleHAiOjE3NjUwOTM5NzksImlzcyI6ImF1dGgtc2VydmljZSJ9.Oa4O37IQQIQRGoHOrB8ZMJdax4sMfXdrVL8ggsBZK8pebFv-90Azty7UnJJhtbiXyNsAJEySDwN5bxcvFYxPKQ",
+      "refreshToken" : "9fa343c1-3a3b-4dfb-b0a0-c95f9fcda388"
+    },
+    "errorMessage" : null
+  }, {
+    "stepNumber" : 3,
+    "stepName" : "Logout with authorization header (metadata test)",
+    "success" : false,
+    "durationMs" : 152,
+    "statusCode" : null,
+    "request" : {
+      "url" : "localhost:5051",
+      "method" : "gRPC: AuthService/Logout",
+      "headers" : {
+        "authorization" : "Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiI4IiwidXNlcm5hbWUiOiJtdDExNTI1NyIsInJvbGVzIjpbIlVTRVIiXSwiaWF0IjoxNzY1MDA3NTc5LCJleHAiOjE3NjUwOTM5NzksImlzcyI6ImF1dGgtc2VydmljZSJ9.Oa4O37IQQIQRGoHOrB8ZMJdax4sMfXdrVL8ggsBZK8pebFv-90Azty7UnJJhtbiXyNsAJEySDwN5bxcvFYxPKQ"
+      },
+      "cookies" : null,
+      "body" : {
+        "refresh_token" : "9fa343c1-3a3b-4dfb-b0a0-c95f9fcda388"
+      }
+    },
+    "response" : {
+      "success" : true,
+      "message" : "Authentication successful",
+      "token" : "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiI4IiwidXNlcm5hbWUiOiJtdDExNTI1NyIsInJvbGVzIjpbIlVTRVIiXSwiaWF0IjoxNzY1MDA3NTc5LCJleHAiOjE3NjUwOTM5NzksImlzcyI6ImF1dGgtc2VydmljZSJ9.Oa4O37IQQIQRGoHOrB8ZMJdax4sMfXdrVL8ggsBZK8pebFv-90Azty7UnJJhtbiXyNsAJEySDwN5bxcvFYxPKQ",
+      "refreshToken" : "9fa343c1-3a3b-4dfb-b0a0-c95f9fcda388",
+      "user" : {
+        "id" : 8,
+        "username" : "mt115257",
+        "name" : "Metadata",
+        "surname" : "Test",
+        "phoneNumber" : "+994501115257",
+        "roles" : [ "USER" ]
+      }
+    },
+    "extractedVariables" : null,
+    "errorMessage" : "gRPC call failed: PERMISSION_DENIED: You do not have permission to perform this action (Service: auth.AuthService, Method: Logout)"
+  } ]
+}

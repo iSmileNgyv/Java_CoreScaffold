@@ -55,10 +55,35 @@ public class GrpcExecutor extends AbstractExecutor {
                 ? (Map<String, Object>) variableResolver.resolveObject(config.getRequest(), context.getVariableContext())
                 : new HashMap<>();
 
+        // Resolve metadata (headers)
+        Map<String, String> metadata = new HashMap<>();
+        if (config.getMetadata() != null) {
+            config.getMetadata().forEach((key, value) -> {
+                String resolvedValue = variableResolver.resolve(value, context.getVariableContext());
+                metadata.put(key, resolvedValue);
+            });
+        }
+
+        // Build request details for logging
+        ExecutionResult.RequestDetails requestDetails = ExecutionResult.RequestDetails.builder()
+                .url(host)
+                .method("gRPC: " + service + "/" + method)
+                .headers(metadata)
+                .body(requestData)
+                .build();
+
+        // Save request details to context
+        context.setVariable("_last_request_details", requestDetails);
+
         // Execute gRPC call
-        String jsonResponse = grpcClient.execute(proto, host, service, method, requestData);
+        String jsonResponse = grpcClient.execute(proto, host, service, method, requestData, metadata);
 
         // Parse JSON response
-        return objectMapper.readValue(jsonResponse, Object.class);
+        Object response = objectMapper.readValue(jsonResponse, Object.class);
+
+        // Save response to context
+        context.setVariable("_last_response", response);
+
+        return response;
     }
 }

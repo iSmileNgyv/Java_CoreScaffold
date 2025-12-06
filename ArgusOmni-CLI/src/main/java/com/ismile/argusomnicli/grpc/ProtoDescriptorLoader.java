@@ -53,10 +53,39 @@ public class ProtoDescriptorLoader {
     }
 
     private Descriptors.FileDescriptor loadProtoFile(File file) throws Exception {
-        // TODO: Implement proto file parsing
-        // This requires proto compiler integration
-        // For MVP, we can require descriptor sets (.pb files)
-        throw new UnsupportedOperationException(
-                "Direct .proto parsing not yet supported. Please provide .pb descriptor set file.");
+        // Compile .proto to .pb using protoc
+        File tempDescriptorFile = File.createTempFile("argusomni_proto_", ".pb");
+        tempDescriptorFile.deleteOnExit(); // Backup cleanup on JVM exit
+
+        try {
+            // Run protoc to compile proto file
+            ProcessBuilder pb = new ProcessBuilder(
+                    "protoc",
+                    "--descriptor_set_out=" + tempDescriptorFile.getAbsolutePath(),
+                    "--include_imports",
+                    "--proto_path=" + file.getParent(),
+                    file.getName()
+            );
+            pb.directory(file.getParentFile());
+            pb.redirectErrorStream(true);
+
+            Process process = pb.start();
+            int exitCode = process.waitFor();
+
+            if (exitCode != 0) {
+                // Read error output
+                String error = new String(process.getInputStream().readAllBytes());
+                throw new RuntimeException("Failed to compile proto file: " + error);
+            }
+
+            // Load the compiled descriptor
+            return loadDescriptorSet(tempDescriptorFile);
+
+        } finally {
+            // Immediate cleanup
+            if (tempDescriptorFile.exists()) {
+                tempDescriptorFile.delete();
+            }
+        }
     }
 }

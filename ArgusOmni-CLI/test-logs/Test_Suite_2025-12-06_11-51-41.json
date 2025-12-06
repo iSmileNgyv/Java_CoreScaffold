@@ -1,0 +1,32 @@
+{
+  "testSuiteName" : "Test Suite",
+  "executionTime" : "2025-12-06T11:51:41.865823",
+  "totalTests" : 1,
+  "passedTests" : 0,
+  "failedTests" : 1,
+  "totalDurationMs" : 443,
+  "steps" : [ {
+    "stepNumber" : 1,
+    "stepName" : "Register new user",
+    "success" : false,
+    "durationMs" : 443,
+    "statusCode" : null,
+    "request" : {
+      "url" : "localhost:5051",
+      "method" : "gRPC: AuthService/Register",
+      "headers" : { },
+      "cookies" : null,
+      "body" : {
+        "password" : "Test123!@#",
+        "surname" : "Test",
+        "name" : "Metadata",
+        "phone_number" : "+994501234567",
+        "email" : "metadata@example.com",
+        "username" : "metadatatest_20251206115141"
+      }
+    },
+    "response" : null,
+    "extractedVariables" : null,
+    "errorMessage" : "gRPC call failed: INVALID_ARGUMENT: Username must be 3-20 characters and contain only letters, numbers, and underscores (Service: auth.AuthService, Method: Register)"
+  } ]
+}

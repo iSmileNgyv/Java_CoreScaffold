@@ -25,6 +25,9 @@ repositories {
 }
 
 dependencies {
+    // gRPC BOM for version alignment
+    implementation platform('io.grpc:grpc-bom:1.68.1')
+
     // Spring Boot
     implementation 'org.springframework.boot:spring-boot-starter'
 
@@ -39,10 +42,10 @@ dependencies {
     // HTTP clients
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
-    // gRPC
-    implementation 'io.grpc:grpc-netty:1.60.0'
-    implementation 'io.grpc:grpc-protobuf:1.60.0'
-    implementation 'io.grpc:grpc-stub:1.60.0'
+    // gRPC (versions managed by BOM)
+    implementation 'io.grpc:grpc-netty'
+    implementation 'io.grpc:grpc-protobuf'
+    implementation 'io.grpc:grpc-stub'
     implementation 'com.google.protobuf:protobuf-java:3.25.1'
     implementation 'com.google.protobuf:protobuf-java-util:3.25.1'
 

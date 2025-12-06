@@ -1,0 +1,150 @@
+{
+  "testSuiteName" : "Test Suite",
+  "executionTime" : "2025-12-06T11:43:39.008689",
+  "totalTests" : 4,
+  "passedTests" : 3,
+  "failedTests" : 1,
+  "totalDurationMs" : 1948,
+  "steps" : [ {
+    "stepNumber" : 1,
+    "stepName" : "Register new user",
+    "success" : true,
+    "durationMs" : 1109,
+    "statusCode" : null,
+    "request" : {
+      "url" : "localhost:5051",
+      "method" : "gRPC: AuthService/Register",
+      "headers" : { },
+      "cookies" : null,
+      "body" : {
+        "password" : "Test123!@#",
+        "surname" : "User",
+        "name" : "Test",
+        "phone_number" : "+994501234567",
+        "email" : "test@example.com",
+        "username" : "testuser"
+      }
+    },
+    "response" : {
+      "success" : true,
+      "message" : "Authentication successful",
+      "token" : "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiI3IiwidXNlcm5hbWUiOiJ0ZXN0dXNlciIsInJvbGVzIjpbIlVTRVIiXSwiaWF0IjoxNzY1MDA3MDE4LCJleHAiOjE3NjUwOTM0MTgsImlzcyI6ImF1dGgtc2VydmljZSJ9.Eab7h5U_egAX7MOkPPgGSY8yKAQ-rMYdI9ss6N4HpKIAaCvTDBaOu-7fYWByzYlwHFw4DjdjnmmnRLH3wOHBbw",
+      "refreshToken" : "9953fda0-c855-482f-82c6-7711c1533295",
+      "user" : {
+        "id" : 7,
+        "username" : "testuser",
+        "name" : "Test",
+        "surname" : "User",
+        "phoneNumber" : "+994501234567",
+        "roles" : [ "USER" ]
+      }
+    },
+    "extractedVariables" : {
+      "accessToken" : "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiI3IiwidXNlcm5hbWUiOiJ0ZXN0dXNlciIsInJvbGVzIjpbIlVTRVIiXSwiaWF0IjoxNzY1MDA3MDE4LCJleHAiOjE3NjUwOTM0MTgsImlzcyI6ImF1dGgtc2VydmljZSJ9.Eab7h5U_egAX7MOkPPgGSY8yKAQ-rMYdI9ss6N4HpKIAaCvTDBaOu-7fYWByzYlwHFw4DjdjnmmnRLH3wOHBbw",
+      "refreshToken" : "9953fda0-c855-482f-82c6-7711c1533295",
+      "username" : "testuser"
+    },
+    "errorMessage" : null
+  }, {
+    "stepNumber" : 2,
+    "stepName" : "Login with registered user",
+    "success" : true,
+    "durationMs" : 676,
+    "statusCode" : null,
+    "request" : {
+      "url" : "localhost:5051",
+      "method" : "gRPC: AuthService/Login",
+      "headers" : { },
+      "cookies" : null,
+      "body" : {
+        "password" : "Test123!@#",
+        "username" : "testuser"
+      }
+    },
+    "response" : {
+      "success" : true,
+      "message" : "Authentication successful",
+      "token" : "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiI3IiwidXNlcm5hbWUiOiJ0ZXN0dXNlciIsInJvbGVzIjpbIlVTRVIiXSwiaWF0IjoxNzY1MDA3MDE4LCJleHAiOjE3NjUwOTM0MTgsImlzcyI6ImF1dGgtc2VydmljZSJ9.Eab7h5U_egAX7MOkPPgGSY8yKAQ-rMYdI9ss6N4HpKIAaCvTDBaOu-7fYWByzYlwHFw4DjdjnmmnRLH3wOHBbw",
+      "refreshToken" : "00b62a81-74bf-47c9-9c0a-8b940544ff4b",
+      "user" : {
+        "id" : 7,
+        "username" : "testuser",
+        "name" : "Test",
+        "surname" : "User",
+        "phoneNumber" : "+994501234567",
+        "roles" : [ "USER" ]
+      }
+    },
+    "extractedVariables" : {
+      "newToken" : "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiI3IiwidXNlcm5hbWUiOiJ0ZXN0dXNlciIsInJvbGVzIjpbIlVTRVIiXSwiaWF0IjoxNzY1MDA3MDE4LCJleHAiOjE3NjUwOTM0MTgsImlzcyI6ImF1dGgtc2VydmljZSJ9.Eab7h5U_egAX7MOkPPgGSY8yKAQ-rMYdI9ss6N4HpKIAaCvTDBaOu-7fYWByzYlwHFw4DjdjnmmnRLH3wOHBbw",
+      "newRefreshToken" : "00b62a81-74bf-47c9-9c0a-8b940544ff4b"
+    },
+    "errorMessage" : null
+  }, {
+    "stepNumber" : 3,
+    "stepName" : "Refresh access token",
+    "success" : true,
+    "durationMs" : 96,
+    "statusCode" : null,
+    "request" : {
+      "url" : "localhost:5051",
+      "method" : "gRPC: AuthService/RefreshToken",
+      "headers" : { },
+      "cookies" : null,
+      "body" : {
+        "refresh_token" : "9953fda0-c855-482f-82c6-7711c1533295"
+      }
+    },
+    "response" : {
+      "success" : true,
+      "message" : "Authentication successful",
+      "token" : "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiI3IiwidXNlcm5hbWUiOiJ0ZXN0dXNlciIsInJvbGVzIjpbIlVTRVIiXSwiaWF0IjoxNzY1MDA3MDE4LCJleHAiOjE3NjUwOTM0MTgsImlzcyI6ImF1dGgtc2VydmljZSJ9.Eab7h5U_egAX7MOkPPgGSY8yKAQ-rMYdI9ss6N4HpKIAaCvTDBaOu-7fYWByzYlwHFw4DjdjnmmnRLH3wOHBbw",
+      "refreshToken" : "f5ba7340-63df-466a-bdaf-ba9bb6198296",
+      "user" : {
+        "id" : 7,
+        "username" : "testuser",
+        "name" : "Test",
+        "surname" : "User",
+        "phoneNumber" : "+994501234567",
+        "roles" : [ "USER" ]
+      }
+    },
+    "extractedVariables" : {
+      "refreshedToken" : "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiI3IiwidXNlcm5hbWUiOiJ0ZXN0dXNlciIsInJvbGVzIjpbIlVTRVIiXSwiaWF0IjoxNzY1MDA3MDE4LCJleHAiOjE3NjUwOTM0MTgsImlzcyI6ImF1dGgtc2VydmljZSJ9.Eab7h5U_egAX7MOkPPgGSY8yKAQ-rMYdI9ss6N4HpKIAaCvTDBaOu-7fYWByzYlwHFw4DjdjnmmnRLH3wOHBbw"
+    },
+    "errorMessage" : null
+  }, {
+    "stepNumber" : 4,
+    "stepName" : "Logout user",
+    "success" : false,
+    "durationMs" : 67,
+    "statusCode" : null,
+    "request" : {
+      "url" : "localhost:5051",
+      "method" : "gRPC: AuthService/Logout",
+      "headers" : {
+        "authorization" : "Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiI3IiwidXNlcm5hbWUiOiJ0ZXN0dXNlciIsInJvbGVzIjpbIlVTRVIiXSwiaWF0IjoxNzY1MDA3MDE4LCJleHAiOjE3NjUwOTM0MTgsImlzcyI6ImF1dGgtc2VydmljZSJ9.Eab7h5U_egAX7MOkPPgGSY8yKAQ-rMYdI9ss6N4HpKIAaCvTDBaOu-7fYWByzYlwHFw4DjdjnmmnRLH3wOHBbw"
+      },
+      "cookies" : null,
+      "body" : {
+        "refresh_token" : "9953fda0-c855-482f-82c6-7711c1533295"
+      }
+    },
+    "response" : {
+      "success" : true,
+      "message" : "Authentication successful",
+      "token" : "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiI3IiwidXNlcm5hbWUiOiJ0ZXN0dXNlciIsInJvbGVzIjpbIlVTRVIiXSwiaWF0IjoxNzY1MDA3MDE4LCJleHAiOjE3NjUwOTM0MTgsImlzcyI6ImF1dGgtc2VydmljZSJ9.Eab7h5U_egAX7MOkPPgGSY8yKAQ-rMYdI9ss6N4HpKIAaCvTDBaOu-7fYWByzYlwHFw4DjdjnmmnRLH3wOHBbw",
+      "refreshToken" : "f5ba7340-63df-466a-bdaf-ba9bb6198296",
+      "user" : {
+        "id" : 7,
+        "username" : "testuser",
+        "name" : "Test",
+        "surname" : "User",
+        "phoneNumber" : "+994501234567",
+        "roles" : [ "USER" ]
+      }
+    },
+    "extractedVariables" : null,
+    "errorMessage" : "gRPC call failed: UNAUTHENTICATED: Missing or invalid authorization header (Service: auth.AuthService, Method: Logout)"
+  } ]
+}

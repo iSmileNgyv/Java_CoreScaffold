@@ -23,7 +23,9 @@ import picocli.CommandLine.Command;
                 PullCommand.class,
                 BranchCommand.class,
                 CheckoutCommand.class,
-                FetchCommand.class
+                FetchCommand.class,
+                MergeCommand.class,
+                LogCommand.class
         }
 )
 public class ChronoCommand {

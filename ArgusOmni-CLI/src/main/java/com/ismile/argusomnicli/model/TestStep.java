@@ -18,6 +18,7 @@ public class TestStep {
     private RestConfig rest;
     private GrpcConfig grpc;
     private FileSystemConfig fs;
+    private BashConfig bash;
     private ResolvePathConfig resolvePath;
     private SetConfig set;
     private TransformConfig transform;

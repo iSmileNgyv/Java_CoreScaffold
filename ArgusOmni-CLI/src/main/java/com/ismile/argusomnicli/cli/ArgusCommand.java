@@ -75,9 +75,12 @@ class RunCommand implements Runnable {
 
         } catch (Exception e) {
             System.err.println("Failed to run tests: " + e.getMessage());
-            if (verbose) {
+
+            // Only show stack trace for unexpected errors (not user errors like invalid YAML)
+            if (verbose && !(e instanceof IllegalArgumentException)) {
                 e.printStackTrace();
             }
+
             System.exit(2); // Invalid YAML or setup error
         }
     }

@@ -106,7 +106,12 @@ public class ConsoleReporter implements Reporter {
         // Generate HTML report
         String htmlReportPath = htmlReportGenerator.generateReport("Test Suite", results, "./test-reports");
         if (htmlReportPath != null) {
-            System.out.println(ANSI_CYAN + "📊 HTML Report: " + htmlReportPath + ANSI_RESET);
+            // Convert to absolute path and create file:// URL for clickable link
+            java.io.File reportFile = new java.io.File(htmlReportPath);
+            String absolutePath = reportFile.getAbsolutePath();
+            String fileUrl = "file://" + absolutePath;
+
+            System.out.println(ANSI_CYAN + "📊 HTML Report: " + fileUrl + ANSI_RESET);
         }
     }
 

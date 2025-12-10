@@ -28,19 +28,64 @@ public class YamlTestParser implements TestParser {
             throw new IllegalArgumentException("Test file not found: " + testFile.getAbsolutePath());
         }
 
-        // Parse YAML to generic map first
-        @SuppressWarnings("unchecked")
-        Map<String, Object> rawData = yamlMapper.readValue(testFile, Map.class);
+        try {
+            // Parse YAML to generic map first
+            @SuppressWarnings("unchecked")
+            Map<String, Object> rawData = yamlMapper.readValue(testFile, Map.class);
 
-        // Convert to TestSuite model
-        TestSuite suite = yamlMapper.convertValue(rawData, TestSuite.class);
+            // Convert to TestSuite model
+            TestSuite suite = yamlMapper.convertValue(rawData, TestSuite.class);
 
-        // Infer step types from config
-        if (suite.getTests() != null) {
-            suite.getTests().forEach(this::inferStepType);
+            // Infer step types from config
+            if (suite.getTests() != null) {
+                suite.getTests().forEach(this::inferStepType);
+            }
+
+            return suite;
+        } catch (Exception e) {
+            // Check if it's an unrecognized property exception (including wrapped ones)
+            Throwable cause = e;
+            while (cause != null) {
+                if (cause instanceof com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException) {
+                    com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException upe =
+                        (com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException) cause;
+
+                    String fieldName = upe.getPropertyName();
+                    String location = upe.getPath().isEmpty() ? "root" :
+                        upe.getPath().stream()
+                            .map(ref -> ref.getFieldName() != null ? ref.getFieldName() : "[" + ref.getIndex() + "]")
+                            .reduce((a, b) -> a + " -> " + b)
+                            .orElse("unknown");
+
+                    throw new IllegalArgumentException(
+                        String.format("Invalid YAML structure:\n" +
+                            "  Unknown field: '%s'\n" +
+                            "  Location: %s\n" +
+                            "  File: %s\n\n" +
+                            "Common issues:\n" +
+                            "  - 'steps' field is not supported. Each item in 'tests' is a single step.\n" +
+                            "  - Check field names match the documentation (case-sensitive).\n" +
+                            "  - Nested test steps are not supported.",
+                            fieldName, location, testFile.getName())
+                    );
+                } else if (cause instanceof com.fasterxml.jackson.core.JsonParseException) {
+                    com.fasterxml.jackson.core.JsonParseException jpe =
+                        (com.fasterxml.jackson.core.JsonParseException) cause;
+                    throw new IllegalArgumentException(
+                        String.format("YAML syntax error in '%s':\n  %s\n  Line: %d, Column: %d",
+                            testFile.getName(), jpe.getOriginalMessage(),
+                            jpe.getLocation().getLineNr(), jpe.getLocation().getColumnNr())
+                    );
+                }
+                cause = cause.getCause();
+            }
+
+            // Generic error if we couldn't identify the specific type
+            throw new IllegalArgumentException(
+                String.format("Failed to parse YAML file '%s': %s",
+                    testFile.getName(), e.getMessage())
+            );
         }
-
-        return suite;
     }
 
     private void inferStepType(TestStep step) {

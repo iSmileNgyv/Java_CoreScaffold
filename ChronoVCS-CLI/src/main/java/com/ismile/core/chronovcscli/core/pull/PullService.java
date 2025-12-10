@@ -2,6 +2,9 @@ package com.ismile.core.chronovcscli.core.pull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ismile.core.chronovcscli.auth.CredentialsEntry;
+import com.ismile.core.chronovcscli.core.merge.MergeEngine;
+import com.ismile.core.chronovcscli.core.merge.MergeResult;
+import com.ismile.core.chronovcscli.core.merge.MergeStrategy;
 import com.ismile.core.chronovcscli.remote.RemoteCloneService;
 import com.ismile.core.chronovcscli.remote.RemoteConfig;
 import com.ismile.core.chronovcscli.remote.dto.BatchObjectsResponseDto;
@@ -24,6 +27,7 @@ public class PullService {
     private final RemoteCloneService remoteCloneService;
     private final LocalCommitReader localCommitReader;
     private final CommitComparator commitComparator;
+    private final MergeEngine mergeEngine;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
@@ -68,12 +72,9 @@ public class PullService {
                     return PullResult.error(analysis.getMessage());
 
                 case DIVERGED:
-                    return PullResult.error(
-                            "Local and remote have diverged.\n" +
-                            "Local HEAD: " + localHead + "\n" +
-                            "Remote HEAD: " + remoteHead + "\n" +
-                            "Please push your changes or manually merge."
-                    );
+                    log.info("Branches have diverged, attempting automatic merge...");
+                    return performMerge(projectRoot, remoteConfig, credentials,
+                            currentBranch, localHead, remoteHead, history);
 
                 case FAST_FORWARD:
                     return performFastForward(projectRoot, remoteConfig, credentials,
@@ -217,5 +218,107 @@ public class PullService {
         }
 
         log.info("Checked out {} files", checkedOut);
+    }
+
+    private PullResult performMerge(File projectRoot,
+                                     RemoteConfig remoteConfig,
+                                     CredentialsEntry credentials,
+                                     String branch,
+                                     String localHead,
+                                     String remoteHead,
+                                     CommitHistoryResponseDto history) throws Exception {
+
+        log.info("Performing three-way merge: local={}, remote={}", localHead, remoteHead);
+
+        // 1. Download all remote commits and blobs first
+        List<CommitSnapshotDto> remoteCommits = history.getCommits();
+
+        // Collect all blob hashes from remote commits
+        Set<String> remoteBlobHashes = new HashSet<>();
+        for (CommitSnapshotDto commit : remoteCommits) {
+            if (commit.getFiles() != null) {
+                remoteBlobHashes.addAll(commit.getFiles().values());
+            }
+        }
+
+        // Filter out blobs that already exist locally
+        Set<String> blobsToDownload = new HashSet<>();
+        for (String hash : remoteBlobHashes) {
+            File blobFile = getBlobFile(projectRoot, hash);
+            if (!blobFile.exists()) {
+                blobsToDownload.add(hash);
+            }
+        }
+
+        log.info("Downloading {} remote objects", blobsToDownload.size());
+
+        // Download new blobs in batches
+        Map<String, String> allObjects = new HashMap<>();
+        if (!blobsToDownload.isEmpty()) {
+            List<String> hashList = new ArrayList<>(blobsToDownload);
+            int batchSize = 50;
+
+            for (int i = 0; i < hashList.size(); i += batchSize) {
+                int end = Math.min(i + batchSize, hashList.size());
+                List<String> batch = hashList.subList(i, end);
+
+                BatchObjectsResponseDto batchResponse = remoteCloneService.getBatchObjects(
+                        remoteConfig, credentials, batch
+                );
+                allObjects.putAll(batchResponse.getObjects());
+            }
+        }
+
+        // Write new blobs to local storage
+        for (Map.Entry<String, String> entry : allObjects.entrySet()) {
+            String hash = entry.getKey();
+            String base64Content = entry.getValue();
+
+            byte[] content = Base64.getDecoder().decode(base64Content);
+
+            File blobFile = getBlobFile(projectRoot, hash);
+            blobFile.getParentFile().mkdirs();
+            Files.write(blobFile.toPath(), content);
+        }
+
+        // Write new commits to local storage
+        for (CommitSnapshotDto commit : remoteCommits) {
+            File commitFile = new File(projectRoot, ".vcs/commits/" + commit.getId());
+            if (!commitFile.exists()) {
+                String commitJson = objectMapper.writerWithDefaultPrettyPrinter()
+                        .writeValueAsString(commit);
+                Files.writeString(commitFile.toPath(), commitJson);
+            }
+        }
+
+        // 2. Now perform the merge
+        MergeResult mergeResult = mergeEngine.merge(projectRoot, localHead, remoteHead, branch);
+
+        // 3. Convert MergeResult to PullResult
+        if (mergeResult.isSuccess()) {
+            if (mergeResult.getStrategy() == MergeStrategy.THREE_WAY) {
+                return PullResult.success(
+                        "Merge completed successfully\n" +
+                        "Merged " + mergeResult.getAutoMergedFiles().size() + " file(s)\n" +
+                        "Merge commit: " + mergeResult.getMergeCommitId(),
+                        remoteCommits.size()
+                );
+            } else {
+                return PullResult.success(mergeResult.getMessage(), remoteCommits.size());
+            }
+        } else {
+            if (mergeResult.hasConflicts()) {
+                StringBuilder message = new StringBuilder();
+                message.append("Automatic merge failed; fix conflicts and run 'chronovcs merge --continue'\n\n");
+                message.append("Conflicted files:\n");
+                for (String file : mergeResult.getConflictedFiles()) {
+                    message.append("  - ").append(file).append("\n");
+                }
+                message.append("\nAuto-merged files: ").append(mergeResult.getAutoMergedFiles().size());
+                return PullResult.error(message.toString());
+            } else {
+                return PullResult.error(mergeResult.getMessage());
+            }
+        }
     }
 }

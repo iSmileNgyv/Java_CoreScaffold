@@ -8,6 +8,7 @@ public enum StepType {
     REST,
     GRPC,
     FS,
+    BASH,
     RESOLVE_PATH,
     SET,
     TRANSFORM,

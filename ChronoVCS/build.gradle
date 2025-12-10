@@ -42,6 +42,9 @@ dependencies {
 	// Jackson for JSON
 	implementation 'com.fasterxml.jackson.core:jackson-databind'
 
+	// JSONPath for dynamic response parsing
+	implementation 'com.jayway.jsonpath:json-path:2.9.0'
+
 	// Lombok
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'

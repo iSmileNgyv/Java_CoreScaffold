@@ -24,6 +24,14 @@ tests:
 
 ## Supported Test Step Types
 
+ArgusOmni supports the following test step types:
+1. **REST** - HTTP/REST API testing
+2. **FS** - File system operations
+3. **BASH** - Shell command and script execution
+4. **SET** - Variable management
+5. **TRANSFORM** - Data transformations
+6. **RESOLVE_PATH** - Path resolution
+
 ### 1. REST API Tests (`rest`)
 
 Execute HTTP requests and validate responses.
@@ -149,6 +157,155 @@ Resolve logical paths to physical paths.
     logicalPath: "README.md"
     output: "physical_path"
 ```
+
+### 6. BASH Script Execution (`bash`)
+
+Execute bash commands and scripts for setup, teardown, and custom operations.
+
+**Direct Command Execution:**
+```yaml
+- name: "Create test directory"
+  bash:
+    command: "mkdir -p /tmp/test-dir && echo 'Created'"
+  expect:
+    status: 0
+```
+
+**Script File Execution:**
+```yaml
+- name: "Run setup script"
+  bash:
+    script: "/path/to/setup.sh"
+    timeout: 10000  # milliseconds (default: 30000)
+  expect:
+    status: 0
+```
+
+**Multi-line Commands:**
+```yaml
+- name: "Database setup"
+  bash:
+    command: |
+      PGPASSWORD={{DB_PASS}} psql -h localhost -U postgres -c "
+      CREATE TABLE users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE
+      );"
+    timeout: 15000
+  expect:
+    status: 0
+```
+
+**With Working Directory:**
+```yaml
+- name: "Build project"
+  bash:
+    command: "./gradlew build"
+    workingDir: "/path/to/project"
+    timeout: 60000
+  expect:
+    status: 0
+```
+
+**Variable Extraction from Output:**
+```yaml
+- name: "Get system info"
+  bash:
+    command: "uname -a"
+  extract:
+    osInfo: "all"          # Extract entire output
+    firstLine: "line:0"    # Extract first line
+    lastLine: "last"       # Extract last line
+    pattern: "Linux.*"     # Extract using regex
+  expect:
+    status: 0
+```
+
+**Error Handling:**
+```yaml
+- name: "Optional cleanup"
+  bash:
+    command: "rm -rf /tmp/test-data"
+    expectedExitCode: 0
+    ignoreExitCode: false  # Fail if exit code != expectedExitCode
+  continueOnError: true
+
+- name: "Expected failure test"
+  bash:
+    command: "exit 1"
+    expectedExitCode: 1  # Expect non-zero exit code
+  expect:
+    status: 1
+```
+
+**Complete BASH Example:**
+```yaml
+env:
+  DB_HOST: "localhost"
+  DB_USER: "postgres"
+  DB_PASS: "secret"
+  TEST_DIR: "/tmp/bash-test"
+
+tests:
+  # Create test directory
+  - name: "Setup test environment"
+    bash:
+      command: |
+        mkdir -p {{TEST_DIR}}
+        echo "Test environment ready"
+    expect:
+      status: 0
+
+  # Create and execute script
+  - name: "Create test script"
+    bash:
+      command: |
+        cat > {{TEST_DIR}}/test.sh << 'EOF'
+        #!/bin/bash
+        echo "Running test script"
+        touch {{TEST_DIR}}/test-file.txt
+        echo "Script completed"
+        EOF
+        chmod +x {{TEST_DIR}}/test.sh
+    expect:
+      status: 0
+
+  - name: "Run test script"
+    bash:
+      script: "{{TEST_DIR}}/test.sh"
+    expect:
+      status: 0
+
+  # Database operation
+  - name: "Insert test data"
+    bash:
+      command: |
+        PGPASSWORD={{DB_PASS}} psql -h {{DB_HOST}} -U {{DB_USER}} -c "
+        INSERT INTO users (email) VALUES ('test@example.com')
+        ON CONFLICT DO NOTHING;"
+    expect:
+      status: 0
+
+  # Cleanup
+  - name: "Cleanup test environment"
+    bash:
+      command: "rm -rf {{TEST_DIR}}"
+    continueOnError: true
+```
+
+**BASH Configuration Options:**
+- `command` - Inline bash command (takes precedence over script)
+- `script` - Path to bash script file
+- `workingDir` - Working directory for command execution
+- `timeout` - Timeout in milliseconds (default: 30000)
+- `expectedExitCode` - Expected exit code (default: 0)
+- `ignoreExitCode` - Ignore non-zero exit codes
+
+**Extraction Patterns:**
+- `"all"` - Extract entire output
+- `"line:N"` - Extract Nth line (0-indexed)
+- `"last"` - Extract last line
+- `"regex pattern"` - Extract using regex (first match or capture group)
 
 ## Variable System
 

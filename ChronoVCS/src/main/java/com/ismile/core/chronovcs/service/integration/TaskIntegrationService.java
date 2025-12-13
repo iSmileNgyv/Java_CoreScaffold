@@ -4,6 +4,7 @@ import com.ismile.core.chronovcs.client.TaskIntegrationClient;
 import com.ismile.core.chronovcs.dto.integration.*;
 import com.ismile.core.chronovcs.entity.*;
 import com.ismile.core.chronovcs.repository.*;
+import com.ismile.core.chronovcs.security.EncryptionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ public class TaskIntegrationService {
     private final TaskRepository taskRepository;
     private final VersionMappingRepository versionMappingRepository;
     private final List<TaskIntegrationClient> integrationClients;
+    private final EncryptionService encryptionService;
 
     /**
      * Create a new task integration
@@ -47,7 +49,12 @@ public class TaskIntegrationService {
             integration.setJiraUrl(request.getJiraUrl());
             integration.setJiraAuthType(request.getJiraAuthType());
             integration.setJiraUsername(request.getJiraUsername());
-            integration.setJiraApiTokenEncrypted(request.getJiraApiToken()); // TODO: Encrypt before storing
+            // Encrypt token before storing
+            if (request.getJiraApiToken() != null && !request.getJiraApiToken().isEmpty()) {
+                String encrypted = encryptionService.encrypt(request.getJiraApiToken());
+                integration.setJiraApiTokenEncrypted(encrypted);
+                log.debug("JIRA API token encrypted successfully");
+            }
         } else if (request.getType() == TaskIntegrationType.GENERIC) {
             integration.setApiUrl(request.getApiUrl());
             integration.setHttpMethod(request.getHttpMethod());
@@ -136,7 +143,12 @@ public class TaskIntegrationService {
             if (request.getJiraUrl() != null) integration.setJiraUrl(request.getJiraUrl());
             if (request.getJiraAuthType() != null) integration.setJiraAuthType(request.getJiraAuthType());
             if (request.getJiraUsername() != null) integration.setJiraUsername(request.getJiraUsername());
-            if (request.getJiraApiToken() != null) integration.setJiraApiTokenEncrypted(request.getJiraApiToken()); // TODO: Encrypt
+            // Encrypt token before storing
+            if (request.getJiraApiToken() != null && !request.getJiraApiToken().isEmpty()) {
+                String encrypted = encryptionService.encrypt(request.getJiraApiToken());
+                integration.setJiraApiTokenEncrypted(encrypted);
+                log.debug("JIRA API token encrypted successfully");
+            }
         } else if (integration.getType() == TaskIntegrationType.GENERIC) {
             if (request.getApiUrl() != null) integration.setApiUrl(request.getApiUrl());
             if (request.getHttpMethod() != null) integration.setHttpMethod(request.getHttpMethod());

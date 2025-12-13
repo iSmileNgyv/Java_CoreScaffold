@@ -3,9 +3,12 @@ package com.ismile.core.chronovcs.controller;
 import com.ismile.core.chronovcs.dto.integration.*;
 import com.ismile.core.chronovcs.entity.TaskEntity;
 import com.ismile.core.chronovcs.service.integration.TaskIntegrationService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,6 +20,7 @@ import java.util.List;
 @RequestMapping("/api/v1/task-integrations")
 @RequiredArgsConstructor
 @Slf4j
+@Validated
 public class TaskIntegrationController {
 
     private final TaskIntegrationService taskIntegrationService;
@@ -27,7 +31,7 @@ public class TaskIntegrationController {
      */
     @PostMapping
     public ResponseEntity<TaskIntegrationResponse> createIntegration(
-            @RequestBody CreateTaskIntegrationRequest request) {
+            @Valid @RequestBody CreateTaskIntegrationRequest request) {
         log.info("Creating task integration: {}", request.getName());
         TaskIntegrationResponse response = taskIntegrationService.createIntegration(request);
         return ResponseEntity.ok(response);
@@ -61,8 +65,8 @@ public class TaskIntegrationController {
      */
     @PutMapping("/{id}")
     public ResponseEntity<TaskIntegrationResponse> updateIntegration(
-            @PathVariable Long id,
-            @RequestBody UpdateTaskIntegrationRequest request) {
+            @PathVariable @NotNull Long id,
+            @Valid @RequestBody UpdateTaskIntegrationRequest request) {
         log.info("Updating task integration: {}", id);
         TaskIntegrationResponse response = taskIntegrationService.updateIntegration(id, request);
         return ResponseEntity.ok(response);
@@ -85,8 +89,8 @@ public class TaskIntegrationController {
      */
     @PostMapping("/{id}/fetch-tasks")
     public ResponseEntity<List<TaskEntity>> fetchTasks(
-            @PathVariable Long id,
-            @RequestBody FetchTasksRequest request) {
+            @PathVariable @NotNull Long id,
+            @Valid @RequestBody FetchTasksRequest request) {
         log.info("Fetching tasks from integration {}: {}", id, request.getTaskIds());
         List<TaskEntity> tasks = taskIntegrationService.fetchAndStoreTasks(id, request.getTaskIds());
         return ResponseEntity.ok(tasks);

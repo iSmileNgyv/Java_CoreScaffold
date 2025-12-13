@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.ClientRequest;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.util.UriComponentsBuilder;
 import reactor.netty.http.client.HttpClient;
 
 import java.time.Duration;
@@ -44,12 +45,34 @@ public class RestExecutor extends AbstractExecutor {
         return step.getType() == StepType.REST && step.getRest() != null;
     }
 
+    /**
+     * Build URL with query parameters.
+     * Supports variable resolution in both URL and query parameter values.
+     * URL encoding is handled automatically by UriComponentsBuilder.
+     */
+    private String buildUrlWithQueryParams(RestConfig config, ExecutionContext context) {
+        String url = variableResolver.resolve(config.getUrl(), context.getVariableContext());
+
+        if (config.getQueryParams() != null && !config.getQueryParams().isEmpty()) {
+            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(url);
+
+            config.getQueryParams().forEach((key, value) -> {
+                String resolvedValue = variableResolver.resolve(value, context.getVariableContext());
+                builder.queryParam(key, resolvedValue);
+            });
+
+            url = builder.build().toUriString();
+        }
+
+        return url;
+    }
+
     @Override
     protected Object doExecute(TestStep step, ExecutionContext context) throws Exception {
         RestConfig config = step.getRest();
 
-        // Resolve variables in config
-        String url = variableResolver.resolve(config.getUrl(), context.getVariableContext());
+        // Resolve variables in config and build URL with query parameters
+        String url = buildUrlWithQueryParams(config, context);
         String method = config.getMethod().toUpperCase();
 
         // Parse cookie configuration
@@ -91,6 +114,9 @@ public class RestExecutor extends AbstractExecutor {
                 .build();
         context.setVariable("_last_request_details", requestDetails);
 
+        // Start timing for performance assertion
+        long startTime = System.currentTimeMillis();
+
         try {
             // Build HTTP client with HTTP/2 support if needed
             HttpClient httpClient = HttpClient.create();
@@ -129,10 +155,15 @@ public class RestExecutor extends AbstractExecutor {
 
             // Execute request with timeout and capture response entity
             int timeout = config.getTimeout() != null ? config.getTimeout() : 30000;
+
             var responseEntity = finalRequest.retrieve()
                     .toEntity(String.class)
                     .timeout(Duration.ofMillis(timeout))
                     .block();
+
+            // Calculate response time
+            long responseTime = System.currentTimeMillis() - startTime;
+            context.setVariable("_last_response_time", responseTime);
 
             if (responseEntity == null) {
                 context.setVariable("_last_status_code", 0);
@@ -165,6 +196,10 @@ public class RestExecutor extends AbstractExecutor {
 
         } catch (org.springframework.web.reactive.function.client.WebClientResponseException e) {
             // HTTP error response (4xx, 5xx)
+            // Calculate response time even for error responses
+            long responseTime = System.currentTimeMillis() - startTime;
+            context.setVariable("_last_response_time", responseTime);
+
             context.setVariable("_last_status_code", e.getStatusCode().value());
             context.setVariable("_last_error_type", "HTTP_ERROR");
 
@@ -183,6 +218,10 @@ public class RestExecutor extends AbstractExecutor {
             throw new Exception(String.format("HTTP %d: %s", e.getStatusCode().value(), e.getStatusText()));
 
         } catch (Exception e) {
+            // Calculate response time even for errors
+            long responseTime = System.currentTimeMillis() - startTime;
+            context.setVariable("_last_response_time", responseTime);
+
             // Check error type from exception message
             String errorMsg = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
 

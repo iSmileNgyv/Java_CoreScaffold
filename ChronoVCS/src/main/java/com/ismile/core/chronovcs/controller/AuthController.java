@@ -11,13 +11,16 @@ import com.ismile.core.chronovcs.service.auth.AuthService;
 import com.ismile.core.chronovcs.service.auth.AuthenticatedUser;
 import com.ismile.core.chronovcs.service.auth.TokenService;
 import com.ismile.core.chronovcs.web.CurrentUser;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Validated
 public class AuthController {
 
     private final AuthService authService;
@@ -30,7 +33,7 @@ public class AuthController {
      * Body: { "email": "...", "password": "..." }
      */
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
     }
 

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ismile.core.chronovcs.entity.TaskIntegrationEntity;
 import com.ismile.core.chronovcs.entity.TaskIntegrationType;
+import com.ismile.core.chronovcs.security.EncryptionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
@@ -24,6 +25,7 @@ public class JiraIntegrationClient implements TaskIntegrationClient {
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final EncryptionService encryptionService;
 
     @Override
     public boolean supports(TaskIntegrationEntity integration) {
@@ -58,13 +60,17 @@ public class JiraIntegrationClient implements TaskIntegrationClient {
 
         // Add authentication
         if ("BASIC".equals(integration.getJiraAuthType())) {
-            // TODO: Decrypt jiraApiTokenEncrypted before using
-            String auth = integration.getJiraUsername() + ":" + integration.getJiraApiTokenEncrypted();
+            // Decrypt token before using
+            String decryptedToken = encryptionService.decrypt(integration.getJiraApiTokenEncrypted());
+            String auth = integration.getJiraUsername() + ":" + decryptedToken;
             String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes());
             headers.add("Authorization", "Basic " + encodedAuth);
+            log.debug("Using BASIC authentication for JIRA");
         } else if ("BEARER".equals(integration.getJiraAuthType())) {
-            // TODO: Decrypt jiraApiTokenEncrypted before using
-            headers.add("Authorization", "Bearer " + integration.getJiraApiTokenEncrypted());
+            // Decrypt token before using
+            String decryptedToken = encryptionService.decrypt(integration.getJiraApiTokenEncrypted());
+            headers.add("Authorization", "Bearer " + decryptedToken);
+            log.debug("Using BEARER authentication for JIRA");
         }
 
         HttpEntity<String> request = new HttpEntity<>(headers);

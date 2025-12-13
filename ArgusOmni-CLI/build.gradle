@@ -52,6 +52,9 @@ dependencies {
     // JSONPath
     implementation 'com.jayway.jsonpath:json-path:2.9.0'
 
+    // JSON Schema Validation
+    implementation 'com.networknt:json-schema-validator:1.5.1'
+
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

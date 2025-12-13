@@ -1,6 +1,7 @@
 package com.ismile.core.chronovcscli.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ismile.core.chronovcscli.security.CredentialsEncryption;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,7 @@ import java.util.Optional;
 public class CredentialsService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final CredentialsEncryption encryption = new CredentialsEncryption();
 
     private Path getConfigFilePath() {
         String home = System.getProperty("user.home");
@@ -32,7 +34,24 @@ public class CredentialsService {
                 return new CredentialsStore();
             }
 
-            return objectMapper.readValue(file, CredentialsStore.class);
+            CredentialsStore store = objectMapper.readValue(file, CredentialsStore.class);
+
+            // Decrypt all tokens
+            for (CredentialsEntry entry : store.getServers()) {
+                if (entry.getToken() != null && !entry.getToken().isEmpty()) {
+                    // Check if already encrypted (for backward compatibility)
+                    if (encryption.isEncrypted(entry.getToken())) {
+                        try {
+                            String decrypted = encryption.decrypt(entry.getToken());
+                            entry.setToken(decrypted);
+                        } catch (Exception e) {
+                            log.warn("Failed to decrypt token for {}: {}", entry.getBaseUrl(), e.getMessage());
+                        }
+                    }
+                }
+            }
+
+            return store;
         } catch (Exception e) {
             log.warn("Failed to load credentials store: {}", e.getMessage());
             return new CredentialsStore();
@@ -49,9 +68,28 @@ public class CredentialsService {
                 throw new IllegalStateException("Could not create directory: " + dir);
             }
 
+            // Create a copy of the store with encrypted tokens
+            CredentialsStore encryptedStore = new CredentialsStore();
+            for (CredentialsEntry entry : store.getServers()) {
+                CredentialsEntry encryptedEntry = new CredentialsEntry();
+                encryptedEntry.setBaseUrl(entry.getBaseUrl());
+                encryptedEntry.setUserUid(entry.getUserUid());
+                encryptedEntry.setEmail(entry.getEmail());
+
+                // Encrypt token before saving
+                if (entry.getToken() != null && !entry.getToken().isEmpty()) {
+                    String encrypted = encryption.encrypt(entry.getToken());
+                    encryptedEntry.setToken(encrypted);
+                } else {
+                    encryptedEntry.setToken(entry.getToken());
+                }
+
+                encryptedStore.getServers().add(encryptedEntry);
+            }
+
             objectMapper
                     .writerWithDefaultPrettyPrinter()
-                    .writeValue(file, store);
+                    .writeValue(file, encryptedStore);
 
             try {
                 // Try to restrict permissions (Unix)
@@ -64,6 +102,8 @@ public class CredentialsService {
             } catch (Exception ignored) {
                 // On Windows or unsupported FS – ignore
             }
+
+            log.debug("Credentials saved with encryption");
 
         } catch (Exception e) {
             throw new RuntimeException("Failed to save credentials store: " + e.getMessage(), e);

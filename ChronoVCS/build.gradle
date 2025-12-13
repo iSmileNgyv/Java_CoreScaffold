@@ -45,6 +45,9 @@ dependencies {
 	// JSONPath for dynamic response parsing
 	implementation 'com.jayway.jsonpath:json-path:2.9.0'
 
+	// Rate Limiting
+	implementation 'com.bucket4j:bucket4j-core:8.7.0'
+
 	// Lombok
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'

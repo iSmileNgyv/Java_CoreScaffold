@@ -14,13 +14,17 @@ import com.ismile.core.chronovcs.service.clone.CloneService;
 import com.ismile.core.chronovcs.service.permission.PermissionService;
 import com.ismile.core.chronovcs.service.repository.RepositoryService;
 import com.ismile.core.chronovcs.web.CurrentUser;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/repositories")
 @RequiredArgsConstructor
+@Validated
 public class RepositoryController {
 
     private final PermissionService permissionService;
@@ -30,7 +34,7 @@ public class RepositoryController {
     @GetMapping("/{repoKey}/info")
     public ResponseEntity<RepositoryInfoDto> getRepoInfo(
             @CurrentUser AuthenticatedUser user,
-            @PathVariable String repoKey
+            @PathVariable @Pattern(regexp = "^[a-zA-Z0-9_-]+$", message = "Invalid repository key") String repoKey
     ) {
         permissionService.assertCanRead(user, repoKey);
         RepositoryInfoDto info = repositoryService.getRepositoryInfo(repoKey);
@@ -47,7 +51,7 @@ public class RepositoryController {
     @PostMapping
     public ResponseEntity<CreateRepositoryResponseDto> createRepository(
             @CurrentUser AuthenticatedUser user,
-            @RequestBody CreateRepositoryRequestDto request
+            @Valid @RequestBody CreateRepositoryRequestDto request
     ) {
         CreateRepositoryResponseDto response = repositoryService.createRepository(user, request);
         return ResponseEntity.status(201).body(response);

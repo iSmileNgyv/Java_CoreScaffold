@@ -7,18 +7,27 @@ import com.ismile.argusomnicli.model.StepType;
 import com.ismile.argusomnicli.model.TestStep;
 import com.ismile.argusomnicli.runner.ExecutionContext;
 import com.ismile.argusomnicli.variable.VariableResolver;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseCookie;
+import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ClientRequest;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.netty.http.client.HttpClient;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.*;
 
@@ -100,7 +109,51 @@ public class RestExecutor extends AbstractExecutor {
 
         // Get request body
         Object requestBody = null;
-        if (config.getBody() != null) {
+        if (config.getMultipart() != null && !config.getMultipart().isEmpty()) {
+            // For multipart, show field names and file info instead of full content
+            Map<String, Object> multipartInfo = new HashMap<>();
+            for (Map.Entry<String, Object> entry : config.getMultipart().entrySet()) {
+                Object value = variableResolver.resolveObject(entry.getValue(), context.getVariableContext());
+
+                // Check if value is a List/Array
+                if (value instanceof java.util.List) {
+                    @SuppressWarnings("unchecked")
+                    java.util.List<Object> items = (java.util.List<Object>) value;
+                    java.util.List<String> arrayInfo = new java.util.ArrayList<>();
+                    for (Object item : items) {
+                        if (item instanceof String && isFilePath((String) item)) {
+                            arrayInfo.add("[FILE: " + item + "]");
+                        } else {
+                            arrayInfo.add(String.valueOf(item));
+                        }
+                    }
+                    multipartInfo.put(entry.getKey(), "[ARRAY: " + arrayInfo + "]");
+                }
+                // Check if value is explicit array config
+                else if (value instanceof Map && ((Map<?, ?>) value).containsKey("type")
+                         && "array".equals(((Map<?, ?>) value).get("type"))) {
+                    Map<?, ?> arrayConfig = (Map<?, ?>) value;
+                    String arrayFormat = arrayConfig.containsKey("arrayFormat")
+                        ? String.valueOf(arrayConfig.get("arrayFormat"))
+                        : "brackets";
+                    multipartInfo.put(entry.getKey(), "[ARRAY format=" + arrayFormat + ", items=" + arrayConfig.get("items") + "]");
+                }
+                // Check if value is file config
+                else if (value instanceof Map && ((Map<?, ?>) value).containsKey("path")) {
+                    Map<?, ?> fileConfig = (Map<?, ?>) value;
+                    multipartInfo.put(entry.getKey(), "[FILE: " + fileConfig.get("path") + "]");
+                }
+                // Check if value is simple file path
+                else if (value instanceof String && isFilePath((String) value)) {
+                    multipartInfo.put(entry.getKey(), "[FILE: " + value + "]");
+                }
+                // Regular form field
+                else {
+                    multipartInfo.put(entry.getKey(), value);
+                }
+            }
+            requestBody = multipartInfo;
+        } else if (config.getBody() != null) {
             requestBody = variableResolver.resolveObject(config.getBody(), context.getVariableContext());
         }
 
@@ -145,7 +198,13 @@ public class RestExecutor extends AbstractExecutor {
 
             // Add body if present
             WebClient.RequestHeadersSpec<?> finalRequest;
-            if (config.getBody() != null) {
+            if (config.getMultipart() != null && !config.getMultipart().isEmpty()) {
+                // Handle multipart/form-data request
+                MultipartBodyBuilder multipartBuilder = buildMultipartBody(config, context);
+                finalRequest = request.contentType(MediaType.MULTIPART_FORM_DATA)
+                        .body(BodyInserters.fromMultipartData(multipartBuilder.build()));
+            } else if (config.getBody() != null) {
+                // Handle regular JSON body
                 Object resolvedBody = variableResolver.resolveObject(config.getBody(), context.getVariableContext());
                 finalRequest = request.contentType(MediaType.APPLICATION_JSON)
                         .bodyValue(resolvedBody);
@@ -397,5 +456,235 @@ public class RestExecutor extends AbstractExecutor {
         public Map<String, String> getManualCookies() {
             return manualCookies;
         }
+    }
+
+    // ==================== Multipart/Form-Data Support Methods ====================
+
+    /**
+     * Build multipart body from configuration.
+     * Supports both simple file paths and advanced file metadata.
+     *
+     * Examples:
+     * 1. Simple file: { "photo": "/path/to/image.jpg" }
+     * 2. Advanced file: { "file": { "path": "/path/to/doc.pdf", "fieldName": "document", "contentType": "application/pdf" } }
+     * 3. Form field: { "name": "John Doe" }
+     * 4. Mixed: { "photo": "/path/to/image.jpg", "name": "John", "age": "30" }
+     * 5. Simple array: { "photos": ["/path/1.jpg", "/path/2.jpg"] }
+     * 6. Explicit array: { "photos": { "type": "array", "arrayFormat": "brackets", "items": [...] } }
+     */
+    private MultipartBodyBuilder buildMultipartBody(RestConfig config, ExecutionContext context) throws Exception {
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+
+        for (Map.Entry<String, Object> entry : config.getMultipart().entrySet()) {
+            String key = entry.getKey();
+            Object value = entry.getValue();
+
+            // Resolve variables in values
+            Object resolvedValue = variableResolver.resolveObject(value, context.getVariableContext());
+
+            // Check if value is a List/Array (simple array support)
+            if (resolvedValue instanceof java.util.List) {
+                @SuppressWarnings("unchecked")
+                java.util.List<Object> items = (java.util.List<Object>) resolvedValue;
+                // Default array format: brackets
+                addArrayParts(builder, key, items, "brackets", context);
+            }
+            // Check if value is explicit array configuration
+            else if (resolvedValue instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> mapValue = (Map<String, Object>) resolvedValue;
+
+                if (mapValue.containsKey("type") && "array".equals(mapValue.get("type"))) {
+                    // Explicit array configuration
+                    addExplicitArrayParts(builder, key, mapValue, context);
+                } else if (mapValue.containsKey("path")) {
+                    // Advanced file configuration
+                    addFilePartAdvanced(builder, key, mapValue, context);
+                } else {
+                    // Regular form field that happens to be a map
+                    builder.part(key, resolvedValue);
+                }
+            } else if (resolvedValue instanceof String) {
+                String strValue = (String) resolvedValue;
+
+                // Check if it's a file path
+                if (isFilePath(strValue)) {
+                    // Simple file upload
+                    addFilePartSimple(builder, key, strValue);
+                } else {
+                    // Regular form field
+                    builder.part(key, strValue);
+                }
+            } else {
+                // Other types (numbers, booleans, etc.)
+                builder.part(key, resolvedValue);
+            }
+        }
+
+        return builder;
+    }
+
+    /**
+     * Add array items as multiple parts.
+     * Supports different array naming formats.
+     */
+    private void addArrayParts(MultipartBodyBuilder builder, String fieldName, java.util.List<Object> items,
+                               String arrayFormat, ExecutionContext context) throws Exception {
+        for (int i = 0; i < items.size(); i++) {
+            Object item = items.get(i);
+            Object resolvedItem = variableResolver.resolveObject(item, context.getVariableContext());
+
+            String partName = formatArrayFieldName(fieldName, i, arrayFormat);
+
+            // Check if item is a file path
+            if (resolvedItem instanceof String && isFilePath((String) resolvedItem)) {
+                addFilePartSimple(builder, partName, (String) resolvedItem);
+            } else if (resolvedItem instanceof Map && ((Map<?, ?>) resolvedItem).containsKey("path")) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> fileConfig = (Map<String, Object>) resolvedItem;
+                addFilePartAdvanced(builder, partName, fileConfig, context);
+            } else {
+                // Regular form field
+                builder.part(partName, resolvedItem);
+            }
+        }
+    }
+
+    /**
+     * Add explicit array configuration parts.
+     * Format: { type: "array", arrayFormat: "brackets", items: [...] }
+     */
+    private void addExplicitArrayParts(MultipartBodyBuilder builder, String fieldName,
+                                      Map<String, Object> config, ExecutionContext context) throws Exception {
+        Object itemsObj = config.get("items");
+        if (!(itemsObj instanceof java.util.List)) {
+            throw new Exception("Array configuration must have 'items' as a list");
+        }
+
+        @SuppressWarnings("unchecked")
+        java.util.List<Object> items = (java.util.List<Object>) itemsObj;
+
+        // Get array format (default: brackets)
+        String arrayFormat = config.containsKey("arrayFormat")
+            ? config.get("arrayFormat").toString()
+            : "brackets";
+
+        addArrayParts(builder, fieldName, items, arrayFormat, context);
+    }
+
+    /**
+     * Format array field name based on arrayFormat.
+     * Supports: brackets (photos[]), indexed (photos[0]), same (photos)
+     */
+    private String formatArrayFieldName(String fieldName, int index, String arrayFormat) {
+        return switch (arrayFormat.toLowerCase()) {
+            case "brackets" -> fieldName + "[]";
+            case "indexed" -> fieldName + "[" + index + "]";
+            case "same" -> fieldName;
+            default -> fieldName + "[]";  // Default to brackets
+        };
+    }
+
+    /**
+     * Check if a string looks like a file path.
+     * Heuristic: contains file extension or starts with common path indicators.
+     */
+    private boolean isFilePath(String value) {
+        // Check for file extensions
+        if (value.matches(".*\\.(jpg|jpeg|png|gif|pdf|doc|docx|xls|xlsx|txt|csv|json|xml|zip|tar|gz)$")) {
+            return true;
+        }
+
+        // Check if file exists
+        Path path = Paths.get(value);
+        return Files.exists(path) && Files.isRegularFile(path);
+    }
+
+    /**
+     * Add file part with simple configuration (just file path).
+     * Field name defaults to the key name.
+     */
+    private void addFilePartSimple(MultipartBodyBuilder builder, String fieldName, String filePath) throws Exception {
+        File file = new File(filePath);
+
+        if (!file.exists()) {
+            throw new Exception("File not found: " + filePath);
+        }
+
+        if (!file.isFile()) {
+            throw new Exception("Path is not a file: " + filePath);
+        }
+
+        FileSystemResource fileResource = new FileSystemResource(file);
+
+        // Auto-detect content type from file extension
+        String contentType = detectContentType(filePath);
+
+        builder.part(fieldName, fileResource)
+               .contentType(MediaType.parseMediaType(contentType))
+               .filename(file.getName());
+    }
+
+    /**
+     * Add file part with advanced configuration.
+     * Supports custom field name, content type, and filename.
+     */
+    private void addFilePartAdvanced(MultipartBodyBuilder builder, String key, Map<String, Object> fileConfig, ExecutionContext context) throws Exception {
+        String filePath = variableResolver.resolve(fileConfig.get("path").toString(), context.getVariableContext());
+        String fieldName = fileConfig.containsKey("fieldName")
+                ? variableResolver.resolve(fileConfig.get("fieldName").toString(), context.getVariableContext())
+                : key;
+        String contentType = fileConfig.containsKey("contentType")
+                ? variableResolver.resolve(fileConfig.get("contentType").toString(), context.getVariableContext())
+                : detectContentType(filePath);
+        String filename = fileConfig.containsKey("filename")
+                ? variableResolver.resolve(fileConfig.get("filename").toString(), context.getVariableContext())
+                : new File(filePath).getName();
+
+        File file = new File(filePath);
+
+        if (!file.exists()) {
+            throw new Exception("File not found: " + filePath);
+        }
+
+        if (!file.isFile()) {
+            throw new Exception("Path is not a file: " + filePath);
+        }
+
+        FileSystemResource fileResource = new FileSystemResource(file);
+
+        builder.part(fieldName, fileResource)
+               .contentType(MediaType.parseMediaType(contentType))
+               .filename(filename);
+    }
+
+    /**
+     * Detect content type from file extension.
+     */
+    private String detectContentType(String filePath) {
+        String extension = "";
+        int lastDot = filePath.lastIndexOf('.');
+        if (lastDot > 0) {
+            extension = filePath.substring(lastDot + 1).toLowerCase();
+        }
+
+        return switch (extension) {
+            case "jpg", "jpeg" -> "image/jpeg";
+            case "png" -> "image/png";
+            case "gif" -> "image/gif";
+            case "pdf" -> "application/pdf";
+            case "doc" -> "application/msword";
+            case "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            case "xls" -> "application/vnd.ms-excel";
+            case "xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            case "txt" -> "text/plain";
+            case "csv" -> "text/csv";
+            case "json" -> "application/json";
+            case "xml" -> "application/xml";
+            case "zip" -> "application/zip";
+            case "tar" -> "application/x-tar";
+            case "gz" -> "application/gzip";
+            default -> "application/octet-stream";
+        };
     }
 }

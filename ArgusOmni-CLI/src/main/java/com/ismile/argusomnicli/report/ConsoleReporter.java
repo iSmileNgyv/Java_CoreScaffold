@@ -116,6 +116,11 @@ public class ConsoleReporter implements Reporter {
     }
 
     @Override
+    public void reportInfo(String message) {
+        System.out.println(ANSI_YELLOW + "  " + message + ANSI_RESET);
+    }
+
+    @Override
     public int getExitCode() {
         return failedTests > 0 ? 1 : 0;
     }

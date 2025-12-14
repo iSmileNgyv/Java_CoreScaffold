@@ -55,6 +55,9 @@ dependencies {
     // JSON Schema Validation
     implementation 'com.networknt:json-schema-validator:1.5.1'
 
+    // WireMock for Mock Server
+    implementation 'org.wiremock:wiremock-standalone:3.3.1'
+
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

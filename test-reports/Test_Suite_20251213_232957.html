@@ -292,12 +292,12 @@
     <div class="container">
         <div class="header">
             <h1>Test Suite</h1>
-            <div class="meta">Generated: 2025-12-13 16:25:48 | Total Duration: 1.53s</div>
+            <div class="meta">Generated: 2025-12-13 23:29:57 | Total Duration: 88.73s</div>
         </div>
         <div class="summary">
             <div class="summary-card">
                 <div class="label">Total Tests</div>
-                <div class="value">4</div>
+                <div class="value">5</div>
             </div>
             <div class="summary-card success">
                 <div class="label">Passed</div>
@@ -305,22 +305,22 @@
             </div>
             <div class="summary-card failed">
                 <div class="label">Failed</div>
-                <div class="value" style="color: #ef4444;">0</div>
+                <div class="value" style="color: #ef4444;">1</div>
             </div>
             <div class="summary-card performance">
                 <div class="label">Avg Duration</div>
-                <div class="value" style="color: #f59e0b;">382ms</div>
+                <div class="value" style="color: #f59e0b;">17746ms</div>
             </div>
         </div>
 
         <div class="chart-section">
             <h2>Test Results Overview</h2>
             <div class="progress-bar">
-                <div class="progress-passed" style="width: 100.0%%;">
-                    100.0%% Passed
+                <div class="progress-passed" style="width: 80.0%%;">
+                    80.0%% Passed
                 </div>
-                <div class="progress-failed" style="width: 0.0%%;">
-                    0.0%% Failed
+                <div class="progress-failed" style="width: 20.0%%;">
+                    20.0%% Failed
                 </div>
             </div>
         </div>
@@ -329,15 +329,15 @@
             <div class="summary">
                 <div class="summary-card">
                     <div class="label">Min Duration</div>
-                    <div class="value" style="font-size: 24px;">27ms</div>
+                    <div class="value" style="font-size: 24px;">8907ms</div>
                 </div>
                 <div class="summary-card">
                     <div class="label">Max Duration</div>
-                    <div class="value" style="font-size: 24px;">818ms</div>
+                    <div class="value" style="font-size: 24px;">30046ms</div>
                 </div>
                 <div class="summary-card">
                     <div class="label">Avg Duration</div>
-                    <div class="value" style="font-size: 24px;">382ms</div>
+                    <div class="value" style="font-size: 24px;">17746ms</div>
                 </div>
             </div>
         </div>
@@ -347,12 +347,12 @@
                         <div class="test-item" onclick="toggleDetails('test-1')">
                             <span class="test-status pass">✓</span>
                             <div class="test-info">
-                                <div class="test-name">1. User Schema Validation - Pass</div>
-                                <div class="test-meta">Status: 200 | Method: GET</div>
+                                <div class="test-name">1. Simple file array upload</div>
+                                <div class="test-meta">Status: 200 | Method: POST</div>
                             </div>
                             <div class="test-performance">
-                                <div class="duration">818ms</div>
-                                <span class="performance-badge badge-acceptable">Acceptable</span>
+                                <div class="duration">8907ms</div>
+                                <span class="performance-badge badge-slow">Slow</span>
                                 <span class="expand-icon">▼</span>
                             </div>
                         </div>
@@ -362,11 +362,18 @@
                                 <div class="detail-grid">
                                     <div class="detail-item">
                                         <span class="detail-label">URL:</span>
-                                        <code class="detail-value">https://jsonplaceholder.typicode.com/users/1</code>
+                                        <code class="detail-value">https://httpbin.org/post</code>
                                     </div>
                                     <div class="detail-item">
                                         <span class="detail-label">Method:</span>
-                                        <span class="method-badge method-get">GET</span>
+                                        <span class="method-badge method-post">POST</span>
+                                    </div>
+                                    <div class="detail-item full-width">
+                                        <span class="detail-label">Body:</span>
+                                        <pre class="code-block">{
+  &quot;description&quot; : &quot;Photo gallery&quot;,
+  &quot;photos&quot; : &quot;[ARRAY: [[FILE: ArgusOmni-CLI/test-examples/photo1.txt], [FILE: ArgusOmni-CLI/test-examples/photo2.txt], [FILE: ArgusOmni-CLI/test-examples/photo3.txt]]]&quot;
+}</pre>
                                     </div>
                                 </div>
                             </div>
@@ -380,27 +387,25 @@
                                     <div class="detail-item full-width">
                                         <span class="detail-label">Body:</span>
                                         <pre class="code-block">{
-  &quot;id&quot; : 1,
-  &quot;name&quot; : &quot;Leanne Graham&quot;,
-  &quot;username&quot; : &quot;Bret&quot;,
-  &quot;email&quot; : &quot;Sincere@april.biz&quot;,
-  &quot;address&quot; : {
-    &quot;street&quot; : &quot;Kulas Light&quot;,
-    &quot;suite&quot; : &quot;Apt. 556&quot;,
-    &quot;city&quot; : &quot;Gwenborough&quot;,
-    &quot;zipcode&quot; : &quot;92998-3874&quot;,
-    &quot;geo&quot; : {
-      &quot;lat&quot; : &quot;-37.3159&quot;,
-      &quot;lng&quot; : &quot;81.1496&quot;
-    }
+  &quot;args&quot; : { },
+  &quot;data&quot; : &quot;&quot;,
+  &quot;files&quot; : {
+    &quot;photos[]&quot; : &quot;Test Photo 1\n&quot;
   },
-  &quot;phone&quot; : &quot;1-770-736-8031 x56442&quot;,
-  &quot;website&quot; : &quot;hildegard.org&quot;,
-  &quot;company&quot; : {
-    &quot;name&quot; : &quot;Romaguera-Crona&quot;,
-    &quot;catchPhrase&quot; : &quot;Multi-layered client-server neural-net&quot;,
-    &quot;bs&quot; : &quot;harness real-time e-markets&quot;
-  }
+  &quot;form&quot; : {
+    &quot;description&quot; : &quot;Photo gallery&quot;
+  },
+  &quot;headers&quot; : {
+    &quot;Accept&quot; : &quot;*/*&quot;,
+    &quot;Content-Type&quot; : &quot;multipart/form-data;boundary=mDDwId8CHDac_U5ygexv9c1hkfRzTdOpAvrv&quot;,
+    &quot;Host&quot; : &quot;httpbin.org&quot;,
+    &quot;Transfer-Encoding&quot; : &quot;chunked&quot;,
+    &quot;User-Agent&quot; : &quot;ReactorNetty/1.2.11&quot;,
+    &quot;X-Amzn-Trace-Id&quot; : &quot;Root=1-693dbe5e-3b3ffe7d3761f96f72dd123d&quot;
+  },
+  &quot;json&quot; : null,
+  &quot;origin&quot; : &quot;46.22.228.208&quot;,
+  &quot;url&quot; : &quot;https://httpbin.org/post&quot;
 }</pre>
                                     </div>
                                 </div>
@@ -411,12 +416,12 @@
                         <div class="test-item" onclick="toggleDetails('test-2')">
                             <span class="test-status pass">✓</span>
                             <div class="test-info">
-                                <div class="test-name">2. Schema + JSONPath Validation</div>
-                                <div class="test-meta">Status: 200 | Method: GET</div>
+                                <div class="test-name">2. Explicit array - brackets format</div>
+                                <div class="test-meta">Status: 200 | Method: POST</div>
                             </div>
                             <div class="test-performance">
-                                <div class="duration">28ms</div>
-                                <span class="performance-badge badge-excellent">Excellent</span>
+                                <div class="duration">10076ms</div>
+                                <span class="performance-badge badge-slow">Slow</span>
                                 <span class="expand-icon">▼</span>
                             </div>
                         </div>
@@ -426,11 +431,18 @@
                                 <div class="detail-grid">
                                     <div class="detail-item">
                                         <span class="detail-label">URL:</span>
-                                        <code class="detail-value">https://jsonplaceholder.typicode.com/users/1</code>
+                                        <code class="detail-value">https://httpbin.org/post</code>
                                     </div>
                                     <div class="detail-item">
                                         <span class="detail-label">Method:</span>
-                                        <span class="method-badge method-get">GET</span>
+                                        <span class="method-badge method-post">POST</span>
+                                    </div>
+                                    <div class="detail-item full-width">
+                                        <span class="detail-label">Body:</span>
+                                        <pre class="code-block">{
+  &quot;attachments&quot; : &quot;[ARRAY format=brackets, items=[ArgusOmni-CLI/test-examples/photo1.txt, ArgusOmni-CLI/test-examples/photo2.txt]]&quot;,
+  &quot;title&quot; : &quot;Test Upload&quot;
+}</pre>
                                     </div>
                                 </div>
                             </div>
@@ -444,27 +456,25 @@
                                     <div class="detail-item full-width">
                                         <span class="detail-label">Body:</span>
                                         <pre class="code-block">{
-  &quot;id&quot; : 1,
-  &quot;name&quot; : &quot;Leanne Graham&quot;,
-  &quot;username&quot; : &quot;Bret&quot;,
-  &quot;email&quot; : &quot;Sincere@april.biz&quot;,
-  &quot;address&quot; : {
-    &quot;street&quot; : &quot;Kulas Light&quot;,
-    &quot;suite&quot; : &quot;Apt. 556&quot;,
-    &quot;city&quot; : &quot;Gwenborough&quot;,
-    &quot;zipcode&quot; : &quot;92998-3874&quot;,
-    &quot;geo&quot; : {
-      &quot;lat&quot; : &quot;-37.3159&quot;,
-      &quot;lng&quot; : &quot;81.1496&quot;
-    }
+  &quot;args&quot; : { },
+  &quot;data&quot; : &quot;&quot;,
+  &quot;files&quot; : {
+    &quot;attachments[]&quot; : &quot;Test Photo 1\n&quot;
   },
-  &quot;phone&quot; : &quot;1-770-736-8031 x56442&quot;,
-  &quot;website&quot; : &quot;hildegard.org&quot;,
-  &quot;company&quot; : {
-    &quot;name&quot; : &quot;Romaguera-Crona&quot;,
-    &quot;catchPhrase&quot; : &quot;Multi-layered client-server neural-net&quot;,
-    &quot;bs&quot; : &quot;harness real-time e-markets&quot;
-  }
+  &quot;form&quot; : {
+    &quot;title&quot; : &quot;Test Upload&quot;
+  },
+  &quot;headers&quot; : {
+    &quot;Accept&quot; : &quot;*/*&quot;,
+    &quot;Content-Type&quot; : &quot;multipart/form-data;boundary=zU-2Up-ucirZPSRUMFVEg8XhXlSbKnGzh&quot;,
+    &quot;Host&quot; : &quot;httpbin.org&quot;,
+    &quot;Transfer-Encoding&quot; : &quot;chunked&quot;,
+    &quot;User-Agent&quot; : &quot;ReactorNetty/1.2.11&quot;,
+    &quot;X-Amzn-Trace-Id&quot; : &quot;Root=1-693dbe66-11b3a9a37862a97656c71710&quot;
+  },
+  &quot;json&quot; : null,
+  &quot;origin&quot; : &quot;46.22.228.208&quot;,
+  &quot;url&quot; : &quot;https://httpbin.org/post&quot;
 }</pre>
                                     </div>
                                 </div>
@@ -475,12 +485,12 @@
                         <div class="test-item" onclick="toggleDetails('test-3')">
                             <span class="test-status pass">✓</span>
                             <div class="test-info">
-                                <div class="test-name">3. Schema + Performance Validation</div>
-                                <div class="test-meta">Status: 200 | Method: GET</div>
+                                <div class="test-name">3. Explicit array - indexed format</div>
+                                <div class="test-meta">Status: 200 | Method: POST</div>
                             </div>
                             <div class="test-performance">
-                                <div class="duration">653ms</div>
-                                <span class="performance-badge badge-good">Good</span>
+                                <div class="duration">22886ms</div>
+                                <span class="performance-badge badge-slow">Slow</span>
                                 <span class="expand-icon">▼</span>
                             </div>
                         </div>
@@ -490,11 +500,18 @@
                                 <div class="detail-grid">
                                     <div class="detail-item">
                                         <span class="detail-label">URL:</span>
-                                        <code class="detail-value">https://jsonplaceholder.typicode.com/users/2</code>
+                                        <code class="detail-value">https://httpbin.org/post</code>
                                     </div>
                                     <div class="detail-item">
                                         <span class="detail-label">Method:</span>
-                                        <span class="method-badge method-get">GET</span>
+                                        <span class="method-badge method-post">POST</span>
+                                    </div>
+                                    <div class="detail-item full-width">
+                                        <span class="detail-label">Body:</span>
+                                        <pre class="code-block">{
+  &quot;documents&quot; : &quot;[ARRAY format=indexed, items=[ArgusOmni-CLI/test-examples/photo1.txt, ArgusOmni-CLI/test-examples/photo2.txt]]&quot;,
+  &quot;category&quot; : &quot;reports&quot;
+}</pre>
                                     </div>
                                 </div>
                             </div>
@@ -508,27 +525,26 @@
                                     <div class="detail-item full-width">
                                         <span class="detail-label">Body:</span>
                                         <pre class="code-block">{
-  &quot;id&quot; : 2,
-  &quot;name&quot; : &quot;Ervin Howell&quot;,
-  &quot;username&quot; : &quot;Antonette&quot;,
-  &quot;email&quot; : &quot;Shanna@melissa.tv&quot;,
-  &quot;address&quot; : {
-    &quot;street&quot; : &quot;Victor Plains&quot;,
-    &quot;suite&quot; : &quot;Suite 879&quot;,
-    &quot;city&quot; : &quot;Wisokyburgh&quot;,
-    &quot;zipcode&quot; : &quot;90566-7771&quot;,
-    &quot;geo&quot; : {
-      &quot;lat&quot; : &quot;-43.9509&quot;,
-      &quot;lng&quot; : &quot;-34.4618&quot;
-    }
+  &quot;args&quot; : { },
+  &quot;data&quot; : &quot;&quot;,
+  &quot;files&quot; : {
+    &quot;documents[0]&quot; : &quot;Test Photo 1\n&quot;,
+    &quot;documents[1]&quot; : &quot;Test Photo 2\n&quot;
   },
-  &quot;phone&quot; : &quot;010-692-6593 x09125&quot;,
-  &quot;website&quot; : &quot;anastasia.net&quot;,
-  &quot;company&quot; : {
-    &quot;name&quot; : &quot;Deckow-Crist&quot;,
-    &quot;catchPhrase&quot; : &quot;Proactive didactic contingency&quot;,
-    &quot;bs&quot; : &quot;synergize scalable supply-chains&quot;
-  }
+  &quot;form&quot; : {
+    &quot;category&quot; : &quot;reports&quot;
+  },
+  &quot;headers&quot; : {
+    &quot;Accept&quot; : &quot;*/*&quot;,
+    &quot;Content-Type&quot; : &quot;multipart/form-data;boundary=7_3fJ8cpAArMXYUCyK6bGuI7ic0VxM&quot;,
+    &quot;Host&quot; : &quot;httpbin.org&quot;,
+    &quot;Transfer-Encoding&quot; : &quot;chunked&quot;,
+    &quot;User-Agent&quot; : &quot;ReactorNetty/1.2.11&quot;,
+    &quot;X-Amzn-Trace-Id&quot; : &quot;Root=1-693dbe70-36242c8e47253f48734cde65&quot;
+  },
+  &quot;json&quot; : null,
+  &quot;origin&quot; : &quot;46.22.228.208&quot;,
+  &quot;url&quot; : &quot;https://httpbin.org/post&quot;
 }</pre>
                                     </div>
                                 </div>
@@ -539,12 +555,12 @@
                         <div class="test-item" onclick="toggleDetails('test-4')">
                             <span class="test-status pass">✓</span>
                             <div class="test-info">
-                                <div class="test-name">4. Multiple Users Schema Validation</div>
-                                <div class="test-meta">Status: 200 | Method: GET</div>
+                                <div class="test-name">4. Explicit array - same name format</div>
+                                <div class="test-meta">Status: 200 | Method: POST</div>
                             </div>
                             <div class="test-performance">
-                                <div class="duration">27ms</div>
-                                <span class="performance-badge badge-excellent">Excellent</span>
+                                <div class="duration">16817ms</div>
+                                <span class="performance-badge badge-slow">Slow</span>
                                 <span class="expand-icon">▼</span>
                             </div>
                         </div>
@@ -554,11 +570,18 @@
                                 <div class="detail-grid">
                                     <div class="detail-item">
                                         <span class="detail-label">URL:</span>
-                                        <code class="detail-value">https://jsonplaceholder.typicode.com/users</code>
+                                        <code class="detail-value">https://httpbin.org/post</code>
                                     </div>
                                     <div class="detail-item">
                                         <span class="detail-label">Method:</span>
-                                        <span class="method-badge method-get">GET</span>
+                                        <span class="method-badge method-post">POST</span>
+                                    </div>
+                                    <div class="detail-item full-width">
+                                        <span class="detail-label">Body:</span>
+                                        <pre class="code-block">{
+  &quot;images&quot; : &quot;[ARRAY format=same, items=[ArgusOmni-CLI/test-examples/photo1.txt, ArgusOmni-CLI/test-examples/photo2.txt]]&quot;,
+  &quot;uploadedBy&quot; : &quot;TestUser&quot;
+}</pre>
                                     </div>
                                 </div>
                             </div>
@@ -571,227 +594,73 @@
                                     </div>
                                     <div class="detail-item full-width">
                                         <span class="detail-label">Body:</span>
-                                        <pre class="code-block">[ {
-  &quot;id&quot; : 1,
-  &quot;name&quot; : &quot;Leanne Graham&quot;,
-  &quot;username&quot; : &quot;Bret&quot;,
-  &quot;email&quot; : &quot;Sincere@april.biz&quot;,
-  &quot;address&quot; : {
-    &quot;street&quot; : &quot;Kulas Light&quot;,
-    &quot;suite&quot; : &quot;Apt. 556&quot;,
-    &quot;city&quot; : &quot;Gwenborough&quot;,
-    &quot;zipcode&quot; : &quot;92998-3874&quot;,
-    &quot;geo&quot; : {
-      &quot;lat&quot; : &quot;-37.3159&quot;,
-      &quot;lng&quot; : &quot;81.1496&quot;
-    }
+                                        <pre class="code-block">{
+  &quot;args&quot; : { },
+  &quot;data&quot; : &quot;&quot;,
+  &quot;files&quot; : {
+    &quot;images&quot; : &quot;Test Photo 1\n&quot;
   },
-  &quot;phone&quot; : &quot;1-770-736-8031 x56442&quot;,
-  &quot;website&quot; : &quot;hildegard.org&quot;,
-  &quot;company&quot; : {
-    &quot;name&quot; : &quot;Romaguera-Crona&quot;,
-    &quot;catchPhrase&quot; : &quot;Multi-layered client-server neural-net&quot;,
-    &quot;bs&quot; : &quot;harness real-time e-markets&quot;
-  }
-}, {
-  &quot;id&quot; : 2,
-  &quot;name&quot; : &quot;Ervin Howell&quot;,
-  &quot;username&quot; : &quot;Antonette&quot;,
-  &quot;email&quot; : &quot;Shanna@melissa.tv&quot;,
-  &quot;address&quot; : {
-    &quot;street&quot; : &quot;Victor Plains&quot;,
-    &quot;suite&quot; : &quot;Suite 879&quot;,
-    &quot;city&quot; : &quot;Wisokyburgh&quot;,
-    &quot;zipcode&quot; : &quot;90566-7771&quot;,
-    &quot;geo&quot; : {
-      &quot;lat&quot; : &quot;-43.9509&quot;,
-      &quot;lng&quot; : &quot;-34.4618&quot;
-    }
+  &quot;form&quot; : {
+    &quot;uploadedBy&quot; : &quot;TestUser&quot;
   },
-  &quot;phone&quot; : &quot;010-692-6593 x09125&quot;,
-  &quot;website&quot; : &quot;anastasia.net&quot;,
-  &quot;company&quot; : {
-    &quot;name&quot; : &quot;Deckow-Crist&quot;,
-    &quot;catchPhrase&quot; : &quot;Proactive didactic contingency&quot;,
-    &quot;bs&quot; : &quot;synergize scalable supply-chains&quot;
-  }
-}, {
-  &quot;id&quot; : 3,
-  &quot;name&quot; : &quot;Clementine Bauch&quot;,
-  &quot;username&quot; : &quot;Samantha&quot;,
-  &quot;email&quot; : &quot;Nathan@yesenia.net&quot;,
-  &quot;address&quot; : {
-    &quot;street&quot; : &quot;Douglas Extension&quot;,
-    &quot;suite&quot; : &quot;Suite 847&quot;,
-    &quot;city&quot; : &quot;McKenziehaven&quot;,
-    &quot;zipcode&quot; : &quot;59590-4157&quot;,
-    &quot;geo&quot; : {
-      &quot;lat&quot; : &quot;-68.6102&quot;,
-      &quot;lng&quot; : &quot;-47.0653&quot;
-    }
+  &quot;headers&quot; : {
+    &quot;Accept&quot; : &quot;*/*&quot;,
+    &quot;Content-Type&quot; : &quot;multipart/form-data;boundary=ohoHS1IXVMzeThzprhQBCUA0ZbnMhL4r&quot;,
+    &quot;Host&quot; : &quot;httpbin.org&quot;,
+    &quot;Transfer-Encoding&quot; : &quot;chunked&quot;,
+    &quot;User-Agent&quot; : &quot;ReactorNetty/1.2.11&quot;,
+    &quot;X-Amzn-Trace-Id&quot; : &quot;Root=1-693dbe87-1cc533cb0f52fa2360382451&quot;
   },
-  &quot;phone&quot; : &quot;1-463-123-4447&quot;,
-  &quot;website&quot; : &quot;ramiro.info&quot;,
-  &quot;company&quot; : {
-    &quot;name&quot; : &quot;Romaguera-Jacobson&quot;,
-    &quot;catchPhrase&quot; : &quot;Face to face bifurcated interface&quot;,
-    &quot;bs&quot; : &quot;e-enable strategic applications&quot;
-  }
-}, {
-  &quot;id&quot; : 4,
-  &quot;name&quot; : &quot;Patricia Lebsack&quot;,
-  &quot;username&quot; : &quot;Karianne&quot;,
-  &quot;email&quot; : &quot;Julianne.OConner@kory.org&quot;,
-  &quot;address&quot; : {
-    &quot;street&quot; : &quot;Hoeger Mall&quot;,
-    &quot;suite&quot; : &quot;Apt. 692&quot;,
-    &quot;city&quot; : &quot;South Elvis&quot;,
-    &quot;zipcode&quot; : &quot;53919-4257&quot;,
-    &quot;geo&quot; : {
-      &quot;lat&quot; : &quot;29.4572&quot;,
-      &quot;lng&quot; : &quot;-164.2990&quot;
-    }
-  },
-  &quot;phone&quot; : &quot;493-170-9623 x156&quot;,
-  &quot;website&quot; : &quot;kale.biz&quot;,
-  &quot;company&quot; : {
-    &quot;name&quot; : &quot;Robel-Corkery&quot;,
-    &quot;catchPhrase&quot; : &quot;Multi-tiered zero tolerance productivity&quot;,
-    &quot;bs&quot; : &quot;transition cutting-edge web services&quot;
-  }
-}, {
-  &quot;id&quot; : 5,
-  &quot;name&quot; : &quot;Chelsey Dietrich&quot;,
-  &quot;username&quot; : &quot;Kamren&quot;,
-  &quot;email&quot; : &quot;Lucio_Hettinger@annie.ca&quot;,
-  &quot;address&quot; : {
-    &quot;street&quot; : &quot;Skiles Walks&quot;,
-    &quot;suite&quot; : &quot;Suite 351&quot;,
-    &quot;city&quot; : &quot;Roscoeview&quot;,
-    &quot;zipcode&quot; : &quot;33263&quot;,
-    &quot;geo&quot; : {
-      &quot;lat&quot; : &quot;-31.8129&quot;,
-      &quot;lng&quot; : &quot;62.5342&quot;
-    }
-  },
-  &quot;phone&quot; : &quot;(254)954-1289&quot;,
-  &quot;website&quot; : &quot;demarco.info&quot;,
-  &quot;company&quot; : {
-    &quot;name&quot; : &quot;Keebler LLC&quot;,
-    &quot;catchPhrase&quot; : &quot;User-centric fault-tolerant solution&quot;,
-    &quot;bs&quot; : &quot;revolutionize end-to-end systems&quot;
-  }
-}, {
-  &quot;id&quot; : 6,
-  &quot;name&quot; : &quot;Mrs. Dennis Schulist&quot;,
-  &quot;username&quot; : &quot;Leopoldo_Corkery&quot;,
-  &quot;email&quot; : &quot;Karley_Dach@jasper.info&quot;,
-  &quot;address&quot; : {
-    &quot;street&quot; : &quot;Norberto Crossing&quot;,
-    &quot;suite&quot; : &quot;Apt. 950&quot;,
-    &quot;city&quot; : &quot;South Christy&quot;,
-    &quot;zipcode&quot; : &quot;23505-1337&quot;,
-    &quot;geo&quot; : {
-      &quot;lat&quot; : &quot;-71.4197&quot;,
-      &quot;lng&quot; : &quot;71.7478&quot;
-    }
-  },
-  &quot;phone&quot; : &quot;1-477-935-8478 x6430&quot;,
-  &quot;website&quot; : &quot;ola.org&quot;,
-  &quot;company&quot; : {
-    &quot;name&quot; : &quot;Considine-Lockman&quot;,
-    &quot;catchPhrase&quot; : &quot;Synchronised bottom-line interface&quot;,
-    &quot;bs&quot; : &quot;e-enable innovative applications&quot;
-  }
-}, {
-  &quot;id&quot; : 7,
-  &quot;name&quot; : &quot;Kurtis Weissnat&quot;,
-  &quot;username&quot; : &quot;Elwyn.Skiles&quot;,
-  &quot;email&quot; : &quot;Telly.Hoeger@billy.biz&quot;,
-  &quot;address&quot; : {
-    &quot;street&quot; : &quot;Rex Trail&quot;,
-    &quot;suite&quot; : &quot;Suite 280&quot;,
-    &quot;city&quot; : &quot;Howemouth&quot;,
-    &quot;zipcode&quot; : &quot;58804-1099&quot;,
-    &quot;geo&quot; : {
-      &quot;lat&quot; : &quot;24.8918&quot;,
-      &quot;lng&quot; : &quot;21.8984&quot;
-    }
-  },
-  &quot;phone&quot; : &quot;210.067.6132&quot;,
-  &quot;website&quot; : &quot;elvis.io&quot;,
-  &quot;company&quot; : {
-    &quot;name&quot; : &quot;Johns Group&quot;,
-    &quot;catchPhrase&quot; : &quot;Configurable multimedia task-force&quot;,
-    &quot;bs&quot; : &quot;generate enterprise e-tailers&quot;
-  }
-}, {
-  &quot;id&quot; : 8,
-  &quot;name&quot; : &quot;Nicholas Runolfsdottir V&quot;,
-  &quot;username&quot; : &quot;Maxime_Nienow&quot;,
-  &quot;email&quot; : &quot;Sherwood@rosamond.me&quot;,
-  &quot;address&quot; : {
-    &quot;street&quot; : &quot;Ellsworth Summit&quot;,
-    &quot;suite&quot; : &quot;Suite 729&quot;,
-    &quot;city&quot; : &quot;Aliyaview&quot;,
-    &quot;zipcode&quot; : &quot;45169&quot;,
-    &quot;geo&quot; : {
-      &quot;lat&quot; : &quot;-14.3990&quot;,
-      &quot;lng&quot; : &quot;-120.7677&quot;
-    }
-  },
-  &quot;phone&quot; : &quot;586.493.6943 x140&quot;,
-  &quot;website&quot; : &quot;jacynthe.com&quot;,
-  &quot;company&quot; : {
-    &quot;name&quot; : &quot;Abernathy Group&quot;,
-    &quot;catchPhrase&quot; : &quot;Implemented secondary concept&quot;,
-    &quot;bs&quot; : &quot;e-enable extensible e-tailers&quot;
-  }
-}, {
-  &quot;id&quot; : 9,
-  &quot;name&quot; : &quot;Glenna Reichert&quot;,
-  &quot;username&quot; : &quot;Delphine&quot;,
-  &quot;email&quot; : &quot;Chaim_McDermott@dana.io&quot;,
-  &quot;address&quot; : {
-    &quot;street&quot; : &quot;Dayna Park&quot;,
-    &quot;suite&quot; : &quot;Suite 449&quot;,
-    &quot;city&quot; : &quot;Bartholomebury&quot;,
-    &quot;zipcode&quot; : &quot;76495-3109&quot;,
-    &quot;geo&quot; : {
-      &quot;lat&quot; : &quot;24.6463&quot;,
-      &quot;lng&quot; : &quot;-168.8889&quot;
-    }
-  },
-  &quot;phone&quot; : &quot;(775)976-6794 x41206&quot;,
-  &quot;website&quot; : &quot;conrad.com&quot;,
-  &quot;company&quot; : {
-    &quot;name&quot; : &quot;Yost and Sons&quot;,
-    &quot;catchPhrase&quot; : &quot;Switchable contextually-based project&quot;,
-    &quot;bs&quot; : &quot;aggregate real-time technologies&quot;
-  }
-}, {
-  &quot;id&quot; : 10,
-  &quot;name&quot; : &quot;Clementina DuBuque&quot;,
-  &quot;username&quot; : &quot;Moriah.Stanton&quot;,
-  &quot;email&quot; : &quot;Rey.Padberg@karina.biz&quot;,
-  &quot;address&quot; : {
-    &quot;street&quot; : &quot;Kattie Turnpike&quot;,
-    &quot;suite&quot; : &quot;Suite 198&quot;,
-    &quot;city&quot; : &quot;Lebsackbury&quot;,
-    &quot;zipcode&quot; : &quot;31428-2261&quot;,
-    &quot;geo&quot; : {
-      &quot;lat&quot; : &quot;-38.2386&quot;,
-      &quot;lng&quot; : &quot;57.2232&quot;
-    }
-  },
-  &quot;phone&quot; : &quot;024-648-3804&quot;,
-  &quot;website&quot; : &quot;ambrose.net&quot;,
-  &quot;company&quot; : {
-    &quot;name&quot; : &quot;Hoeger LLC&quot;,
-    &quot;catchPhrase&quot; : &quot;Centralized empowering task-force&quot;,
-    &quot;bs&quot; : &quot;target end-to-end models&quot;
-  }
-} ]</pre>
+  &quot;json&quot; : null,
+  &quot;origin&quot; : &quot;46.22.228.208&quot;,
+  &quot;url&quot; : &quot;https://httpbin.org/post&quot;
+}</pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="test-item-wrapper">
+                        <div class="test-item" onclick="toggleDetails('test-5')">
+                            <span class="test-status fail">✗</span>
+                            <div class="test-info">
+                                <div class="test-name">5. Mixed array with files and text</div>
+                                <div class="test-meta">Status: 0 | Method: POST</div>
+                                <div class="error-message">Assertions failed: [Status mismatch: expected 200, got 0]</div>
+                            </div>
+                            <div class="test-performance">
+                                <div class="duration">30046ms</div>
+                                <span class="performance-badge badge-slow">Slow</span>
+                                <span class="expand-icon">▼</span>
+                            </div>
+                        </div>
+                        <div class="test-details-content" id="test-5">
+                            <div class="detail-section">
+                                <h3>📤 Request</h3>
+                                <div class="detail-grid">
+                                    <div class="detail-item">
+                                        <span class="detail-label">URL:</span>
+                                        <code class="detail-value">https://httpbin.org/post</code>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Method:</span>
+                                        <span class="method-badge method-post">POST</span>
+                                    </div>
+                                    <div class="detail-item full-width">
+                                        <span class="detail-label">Body:</span>
+                                        <pre class="code-block">{
+  &quot;description&quot; : &quot;Mixed content&quot;,
+  &quot;items&quot; : &quot;[ARRAY: [[FILE: ArgusOmni-CLI/test-examples/photo1.txt], Plain text value 1, [FILE: ArgusOmni-CLI/test-examples/photo2.txt], Plain text value 2]]&quot;
+}</pre>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="detail-section">
+                                <h3>📥 Response</h3>
+                                <div class="detail-grid">
+                                    <div class="detail-item">
+                                        <span class="detail-label">Status Code:</span>
+                                        <span class="status-badge status-error">0</span>
                                     </div>
                                 </div>
                             </div>

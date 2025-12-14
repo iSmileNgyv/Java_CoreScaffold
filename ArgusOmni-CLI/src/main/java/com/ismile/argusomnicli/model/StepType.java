@@ -12,5 +12,9 @@ public enum StepType {
     RESOLVE_PATH,
     SET,
     TRANSFORM,
-    ASSERT
+    ASSERT,
+    WAIT,
+    LOOP,
+    IF,
+    MOCK
 }

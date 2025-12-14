@@ -292,7 +292,7 @@
     <div class="container">
         <div class="header">
             <h1>Test Suite</h1>
-            <div class="meta">Generated: 2025-12-13 16:27:44 | Total Duration: 30.15s</div>
+            <div class="meta">Generated: 2025-12-13 23:13:20 | Total Duration: 0.04s</div>
         </div>
         <div class="summary">
             <div class="summary-card">
@@ -309,7 +309,7 @@
             </div>
             <div class="summary-card performance">
                 <div class="label">Avg Duration</div>
-                <div class="value" style="color: #f59e0b;">30151ms</div>
+                <div class="value" style="color: #f59e0b;">40ms</div>
             </div>
         </div>
 
@@ -329,15 +329,15 @@
             <div class="summary">
                 <div class="summary-card">
                     <div class="label">Min Duration</div>
-                    <div class="value" style="font-size: 24px;">30151ms</div>
+                    <div class="value" style="font-size: 24px;">40ms</div>
                 </div>
                 <div class="summary-card">
                     <div class="label">Max Duration</div>
-                    <div class="value" style="font-size: 24px;">30151ms</div>
+                    <div class="value" style="font-size: 24px;">40ms</div>
                 </div>
                 <div class="summary-card">
                     <div class="label">Avg Duration</div>
-                    <div class="value" style="font-size: 24px;">30151ms</div>
+                    <div class="value" style="font-size: 24px;">40ms</div>
                 </div>
             </div>
         </div>
@@ -347,13 +347,13 @@
                         <div class="test-item" onclick="toggleDetails('test-1')">
                             <span class="test-status fail">✗</span>
                             <div class="test-info">
-                                <div class="test-name">1. Date Format dd-MM-yyyy</div>
+                                <div class="test-name">1. Simple file upload</div>
                                 <div class="test-meta">Status: 0 | Method: POST</div>
-                                <div class="error-message">Assertions failed: [Status mismatch: expected 200, got 0, Cannot assert date formats: No response body (status: 0)]</div>
+                                <div class="error-message">Assertions failed: [Status mismatch: expected 200, got 0, Cannot assert JSONPath: No response body (status: 0)]</div>
                             </div>
                             <div class="test-performance">
-                                <div class="duration">30151ms</div>
-                                <span class="performance-badge badge-slow">Slow</span>
+                                <div class="duration">40ms</div>
+                                <span class="performance-badge badge-excellent">Excellent</span>
                                 <span class="expand-icon">▼</span>
                             </div>
                         </div>
@@ -363,7 +363,7 @@
                                 <div class="detail-grid">
                                     <div class="detail-item">
                                         <span class="detail-label">URL:</span>
-                                        <code class="detail-value">https://httpbin.org/anything</code>
+                                        <code class="detail-value">https://httpbin.org/post</code>
                                     </div>
                                     <div class="detail-item">
                                         <span class="detail-label">Method:</span>
@@ -372,8 +372,8 @@
                                     <div class="detail-item full-width">
                                         <span class="detail-label">Body:</span>
                                         <pre class="code-block">{
-  &quot;createdDate&quot; : &quot;15-01-2025&quot;,
-  &quot;eventDate&quot; : &quot;20-12-2024&quot;
+  &quot;file&quot; : &quot;[FILE: test-examples/sample-document.txt]&quot;,
+  &quot;description&quot; : &quot;Test document upload&quot;
 }</pre>
                                     </div>
                                 </div>

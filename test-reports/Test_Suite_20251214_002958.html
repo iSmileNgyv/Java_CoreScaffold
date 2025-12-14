@@ -292,7 +292,7 @@
     <div class="container">
         <div class="header">
             <h1>Test Suite</h1>
-            <div class="meta">Generated: 2025-12-13 16:26:34 | Total Duration: 14.41s</div>
+            <div class="meta">Generated: 2025-12-14 00:29:58 | Total Duration: 5.68s</div>
         </div>
         <div class="summary">
             <div class="summary-card">
@@ -309,7 +309,7 @@
             </div>
             <div class="summary-card performance">
                 <div class="label">Avg Duration</div>
-                <div class="value" style="color: #f59e0b;">7204ms</div>
+                <div class="value" style="color: #f59e0b;">2839ms</div>
             </div>
         </div>
 
@@ -329,15 +329,15 @@
             <div class="summary">
                 <div class="summary-card">
                     <div class="label">Min Duration</div>
-                    <div class="value" style="font-size: 24px;">3145ms</div>
+                    <div class="value" style="font-size: 24px;">2002ms</div>
                 </div>
                 <div class="summary-card">
                     <div class="label">Max Duration</div>
-                    <div class="value" style="font-size: 24px;">11263ms</div>
+                    <div class="value" style="font-size: 24px;">3676ms</div>
                 </div>
                 <div class="summary-card">
                     <div class="label">Avg Duration</div>
-                    <div class="value" style="font-size: 24px;">7204ms</div>
+                    <div class="value" style="font-size: 24px;">2839ms</div>
                 </div>
             </div>
         </div>
@@ -347,66 +347,22 @@
                         <div class="test-item" onclick="toggleDetails('test-1')">
                             <span class="test-status pass">✓</span>
                             <div class="test-info">
-                                <div class="test-name">1. Test Date Format - dd-MM-yyyy</div>
-                                <div class="test-meta">Status: 200 | Method: POST</div>
+                                <div class="test-name">1. Simple wait 2 seconds</div>
+                                <div class="test-meta">Status: 0 | Method: N/A</div>
                             </div>
                             <div class="test-performance">
-                                <div class="duration">3145ms</div>
+                                <div class="duration">2002ms</div>
                                 <span class="performance-badge badge-slow">Slow</span>
                                 <span class="expand-icon">▼</span>
                             </div>
                         </div>
                         <div class="test-details-content" id="test-1">
                             <div class="detail-section">
-                                <h3>📤 Request</h3>
-                                <div class="detail-grid">
-                                    <div class="detail-item">
-                                        <span class="detail-label">URL:</span>
-                                        <code class="detail-value">https://httpbin.org/anything</code>
-                                    </div>
-                                    <div class="detail-item">
-                                        <span class="detail-label">Method:</span>
-                                        <span class="method-badge method-post">POST</span>
-                                    </div>
-                                    <div class="detail-item full-width">
-                                        <span class="detail-label">Body:</span>
-                                        <pre class="code-block">{
-  &quot;createdDate&quot; : &quot;15-01-2025&quot;,
-  &quot;eventDate&quot; : &quot;20-12-2024&quot;
-}</pre>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="detail-section">
                                 <h3>📥 Response</h3>
                                 <div class="detail-grid">
-                                    <div class="detail-item">
-                                        <span class="detail-label">Status Code:</span>
-                                        <span class="status-badge status-success">200</span>
-                                    </div>
                                     <div class="detail-item full-width">
                                         <span class="detail-label">Body:</span>
-                                        <pre class="code-block">{
-  &quot;args&quot; : { },
-  &quot;data&quot; : &quot;{\&quot;createdDate\&quot;:\&quot;15-01-2025\&quot;,\&quot;eventDate\&quot;:\&quot;20-12-2024\&quot;}&quot;,
-  &quot;files&quot; : { },
-  &quot;form&quot; : { },
-  &quot;headers&quot; : {
-    &quot;Accept&quot; : &quot;*/*&quot;,
-    &quot;Content-Length&quot; : &quot;53&quot;,
-    &quot;Content-Type&quot; : &quot;application/json&quot;,
-    &quot;Host&quot; : &quot;httpbin.org&quot;,
-    &quot;User-Agent&quot; : &quot;ReactorNetty/1.2.11&quot;,
-    &quot;X-Amzn-Trace-Id&quot; : &quot;Root=1-693d5b6e-2c2224e544baab4b2d4880c3&quot;
-  },
-  &quot;json&quot; : {
-    &quot;createdDate&quot; : &quot;15-01-2025&quot;,
-    &quot;eventDate&quot; : &quot;20-12-2024&quot;
-  },
-  &quot;method&quot; : &quot;POST&quot;,
-  &quot;origin&quot; : &quot;94.20.178.54&quot;,
-  &quot;url&quot; : &quot;https://httpbin.org/anything&quot;
-}</pre>
+                                        <pre class="code-block">&quot;Waited for 2000ms&quot;</pre>
                                     </div>
                                 </div>
                             </div>
@@ -416,12 +372,12 @@
                         <div class="test-item" onclick="toggleDetails('test-2')">
                             <span class="test-status fail">✗</span>
                             <div class="test-info">
-                                <div class="test-name">2. Test Azerbaijani Date Format</div>
-                                <div class="test-meta">Status: 200 | Method: POST</div>
-                                <div class="error-message">Assertions failed: [Date format mismatch for field &#39;json.publishedDate&#39;: &#39;10 Yanvar 2025&#39; does not match pattern &#39;dd MMMM yyyy&#39; (locale: az-AZ)]</div>
+                                <div class="test-name">2. API call after wait</div>
+                                <div class="test-meta">Status: 503 | Method: GET</div>
+                                <div class="error-message">Assertions failed: [Status mismatch: expected 200, got 503]</div>
                             </div>
                             <div class="test-performance">
-                                <div class="duration">11263ms</div>
+                                <div class="duration">3676ms</div>
                                 <span class="performance-badge badge-slow">Slow</span>
                                 <span class="expand-icon">▼</span>
                             </div>
@@ -432,17 +388,11 @@
                                 <div class="detail-grid">
                                     <div class="detail-item">
                                         <span class="detail-label">URL:</span>
-                                        <code class="detail-value">https://httpbin.org/anything</code>
+                                        <code class="detail-value">https://httpbin.org/get</code>
                                     </div>
                                     <div class="detail-item">
                                         <span class="detail-label">Method:</span>
-                                        <span class="method-badge method-post">POST</span>
-                                    </div>
-                                    <div class="detail-item full-width">
-                                        <span class="detail-label">Body:</span>
-                                        <pre class="code-block">{
-  &quot;publishedDate&quot; : &quot;10 Yanvar 2025&quot;
-}</pre>
+                                        <span class="method-badge method-get">GET</span>
                                     </div>
                                 </div>
                             </div>
@@ -451,30 +401,11 @@
                                 <div class="detail-grid">
                                     <div class="detail-item">
                                         <span class="detail-label">Status Code:</span>
-                                        <span class="status-badge status-success">200</span>
+                                        <span class="status-badge status-error">503</span>
                                     </div>
                                     <div class="detail-item full-width">
                                         <span class="detail-label">Body:</span>
-                                        <pre class="code-block">{
-  &quot;args&quot; : { },
-  &quot;data&quot; : &quot;{\&quot;publishedDate\&quot;:\&quot;10 Yanvar 2025\&quot;}&quot;,
-  &quot;files&quot; : { },
-  &quot;form&quot; : { },
-  &quot;headers&quot; : {
-    &quot;Accept&quot; : &quot;*/*&quot;,
-    &quot;Content-Length&quot; : &quot;34&quot;,
-    &quot;Content-Type&quot; : &quot;application/json&quot;,
-    &quot;Host&quot; : &quot;httpbin.org&quot;,
-    &quot;User-Agent&quot; : &quot;ReactorNetty/1.2.11&quot;,
-    &quot;X-Amzn-Trace-Id&quot; : &quot;Root=1-693d5b6f-2ef1297e721297d15ec833fc&quot;
-  },
-  &quot;json&quot; : {
-    &quot;publishedDate&quot; : &quot;10 Yanvar 2025&quot;
-  },
-  &quot;method&quot; : &quot;POST&quot;,
-  &quot;origin&quot; : &quot;94.20.178.54&quot;,
-  &quot;url&quot; : &quot;https://httpbin.org/anything&quot;
-}</pre>
+                                        <pre class="code-block">&quot;&lt;html&gt;\r\n&lt;head&gt;&lt;title&gt;503 Service Temporarily Unavailable&lt;/title&gt;&lt;/head&gt;\r\n&lt;body&gt;\r\n&lt;center&gt;&lt;h1&gt;503 Service Temporarily Unavailable&lt;/h1&gt;&lt;/center&gt;\r\n&lt;/body&gt;\r\n&lt;/html&gt;\r\n&quot;</pre>
                                     </div>
                                 </div>
                             </div>

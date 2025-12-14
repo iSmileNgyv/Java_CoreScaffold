@@ -26,4 +26,40 @@ public class RestConfig {
     // Example: cookies: { "JSESSIONID": "{{sessionId}}" }
     // Example: cookies: { "auto": true, "CUSTOM": "value" }
     private Object cookies;
+
+    // Multipart/form-data support
+    // Used for file uploads and form submissions
+    // Example (simple):
+    //   multipart:
+    //     profilePhoto: "/path/to/photo.jpg"
+    //     name: "John Doe"
+    //     age: "30"
+    //
+    // Example (advanced with file metadata):
+    //   multipart:
+    //     file:
+    //       path: "/path/to/document.pdf"
+    //       fieldName: "document"
+    //       contentType: "application/pdf"
+    //       filename: "custom-name.pdf"
+    //     name: "John Doe"
+    //     email: "john@example.com"
+    //
+    // Example (simple array):
+    //   multipart:
+    //     photos:
+    //       - "/path/to/photo1.jpg"
+    //       - "/path/to/photo2.jpg"
+    //     name: "Gallery Upload"
+    //
+    // Example (explicit array with format):
+    //   multipart:
+    //     photos:
+    //       type: array
+    //       arrayFormat: brackets  # or "indexed", "same"
+    //       items:
+    //         - "/path/to/photo1.jpg"
+    //         - "/path/to/photo2.jpg"
+    //     description: "Multiple photos"
+    private Map<String, Object> multipart;
 }

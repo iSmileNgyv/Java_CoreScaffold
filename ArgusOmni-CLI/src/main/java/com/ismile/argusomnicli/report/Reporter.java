@@ -28,6 +28,11 @@ public interface Reporter {
     void reportComplete(List<ExecutionResult> results);
 
     /**
+     * Reports informational message (e.g., retry attempts).
+     */
+    void reportInfo(String message);
+
+    /**
      * Returns final exit code.
      */
     int getExitCode();

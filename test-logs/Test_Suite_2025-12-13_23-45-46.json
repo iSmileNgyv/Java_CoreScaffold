@@ -1,0 +1,94 @@
+{
+  "testSuiteName" : "Test Suite",
+  "executionTime" : "2025-12-13T23:45:46.847563",
+  "totalTests" : 8,
+  "passedTests" : 8,
+  "failedTests" : 0,
+  "totalDurationMs" : 1514,
+  "steps" : [ {
+    "stepNumber" : 1,
+    "stepName" : "Wait 1 second",
+    "success" : true,
+    "durationMs" : 1005,
+    "statusCode" : null,
+    "request" : null,
+    "response" : "Waited for 1000ms",
+    "extractedVariables" : { },
+    "errorMessage" : null
+  }, {
+    "stepNumber" : 2,
+    "stepName" : "Set test variables",
+    "success" : true,
+    "durationMs" : 1,
+    "statusCode" : null,
+    "request" : null,
+    "response" : {
+      "counter" : "10",
+      "status" : "READY"
+    },
+    "extractedVariables" : { },
+    "errorMessage" : null
+  }, {
+    "stepNumber" : 3,
+    "stepName" : "Wait for status variable",
+    "success" : true,
+    "durationMs" : 2,
+    "statusCode" : null,
+    "request" : null,
+    "response" : "Condition met after 1 attempts (0ms)",
+    "extractedVariables" : { },
+    "errorMessage" : null
+  }, {
+    "stepNumber" : 4,
+    "stepName" : "Wait for status=READY",
+    "success" : true,
+    "durationMs" : 0,
+    "statusCode" : null,
+    "request" : null,
+    "response" : "Condition met after 1 attempts (0ms)",
+    "extractedVariables" : { },
+    "errorMessage" : null
+  }, {
+    "stepNumber" : 5,
+    "stepName" : "Wait for expression (counter == 10)",
+    "success" : true,
+    "durationMs" : 0,
+    "statusCode" : null,
+    "request" : null,
+    "response" : "Condition met after 1 attempts (0ms)",
+    "extractedVariables" : { },
+    "errorMessage" : null
+  }, {
+    "stepNumber" : 6,
+    "stepName" : "Wait with custom message",
+    "success" : true,
+    "durationMs" : 505,
+    "statusCode" : null,
+    "request" : null,
+    "response" : "Waited for 500ms",
+    "extractedVariables" : { },
+    "errorMessage" : null
+  }, {
+    "stepNumber" : 7,
+    "stepName" : "Update status",
+    "success" : true,
+    "durationMs" : 0,
+    "statusCode" : null,
+    "request" : null,
+    "response" : {
+      "status" : "COMPLETED"
+    },
+    "extractedVariables" : { },
+    "errorMessage" : null
+  }, {
+    "stepNumber" : 8,
+    "stepName" : "Wait for COMPLETED status",
+    "success" : true,
+    "durationMs" : 1,
+    "statusCode" : null,
+    "request" : null,
+    "response" : "Condition met after 1 attempts (0ms)",
+    "extractedVariables" : { },
+    "errorMessage" : null
+  } ]
+}

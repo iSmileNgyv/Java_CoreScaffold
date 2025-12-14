@@ -14,4 +14,5 @@ public class TestSuite {
     private Map<String, String> env;
     private Map<String, Object> variables;
     private List<TestStep> tests;
+    private ExecutionConfig execution;  // Parallel execution configuration
 }

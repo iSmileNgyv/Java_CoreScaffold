@@ -24,4 +24,30 @@ public class ExecutionContext {
     public Object getVariable(String key) {
         return variableContext.get(key);
     }
+
+    public void pushScope() {
+        variableContext.pushScope();
+    }
+
+    public void popScope() {
+        variableContext.popScope();
+    }
+
+    /**
+     * Create a child execution context with a copy of the current variables.
+     * Used by parallel execution to isolate modifications before merging.
+     */
+    public ExecutionContext createChildContext() {
+        return new ExecutionContext(variableContext.copy(), verbose);
+    }
+
+    /**
+     * Merge variables from a child context back into the root context.
+     */
+    public void mergeVariablesFrom(ExecutionContext childContext) {
+        if (childContext == null) {
+            return;
+        }
+        this.variableContext.mergeFrom(childContext.getVariableContext());
+    }
 }

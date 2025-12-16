@@ -161,14 +161,15 @@ public class TestRunner {
                                                        ExecutionContext context,
                                                        ExecutorService executor,
                                                        TestSuite suite) {
-        List<Future<ExecutionResult>> futures = new ArrayList<>();
+        List<Future<StepOutcome>> futures = new ArrayList<>();
 
         // Submit all tests for execution
         for (TestStep test : tests) {
-            Future<ExecutionResult> future = executor.submit(() -> {
-                ExecutionResult result = executeStep(test, context);
+            Future<StepOutcome> future = executor.submit(() -> {
+                ExecutionContext childContext = context.createChildContext();
+                ExecutionResult result = executeStep(test, childContext);
                 reporter.reportStep(result);
-                return result;
+                return new StepOutcome(result, childContext);
             });
             futures.add(future);
         }
@@ -177,15 +178,18 @@ public class TestRunner {
         List<ExecutionResult> results = new ArrayList<>();
         Long timeout = getTimeout(suite);
 
-        for (Future<ExecutionResult> future : futures) {
+        for (Future<StepOutcome> future : futures) {
             try {
-                ExecutionResult result;
+                StepOutcome outcome;
                 if (timeout != null) {
-                    result = future.get(timeout, TimeUnit.MILLISECONDS);
+                    outcome = future.get(timeout, TimeUnit.MILLISECONDS);
                 } else {
-                    result = future.get();
+                    outcome = future.get();
                 }
-                results.add(result);
+                if (outcome != null) {
+                    results.add(outcome.result());
+                    context.mergeVariablesFrom(outcome.context());
+                }
             } catch (TimeoutException e) {
                 reporter.reportInfo("Test execution timeout exceeded");
                 future.cancel(true);
@@ -203,6 +207,8 @@ public class TestRunner {
 
         return results;
     }
+
+    private record StepOutcome(ExecutionResult result, ExecutionContext context) {}
 
     /**
      * Get thread count from configuration.

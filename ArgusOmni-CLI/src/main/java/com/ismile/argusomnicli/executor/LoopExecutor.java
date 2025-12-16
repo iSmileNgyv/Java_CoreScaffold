@@ -87,36 +87,47 @@ public class LoopExecutor extends AbstractExecutor {
                         i + 1, items.size(), item));
             }
 
-            // Set loop variables
-            context.setVariable(itemVariable, item);
-            context.setVariable(indexVariable, i);
-
-            // Execute nested steps
+            // Each iteration gets its own scope so iteration variables don't leak
+            context.getVariableContext().pushScope();
             boolean iterationSuccess = true;
-            for (TestStep nestedStep : config.getSteps()) {
-                try {
-                    ExecutionResult result = executeNestedStep(nestedStep, context);
 
-                    if (!result.isSuccess()) {
+            try {
+                // Set loop variables
+                context.setVariable(itemVariable, item);
+                context.setVariable(indexVariable, i);
+
+                // Execute nested steps
+                for (TestStep nestedStep : config.getSteps()) {
+                    try {
+                        ExecutionResult result = executeNestedStep(nestedStep, context);
+
+                        if (!result.isSuccess()) {
+                            iterationSuccess = false;
+                            String error = String.format("Iteration %d failed at step '%s': %s",
+                                    i, nestedStep.getName(), result.getErrorMessage());
+                            errors.add(error);
+
+                            if (!continueOnError) {
+                                throw new Exception(error);
+                            }
+                        }
+                    } catch (Exception e) {
                         iterationSuccess = false;
                         String error = String.format("Iteration %d failed at step '%s': %s",
-                                i, nestedStep.getName(), result.getErrorMessage());
+                                i, nestedStep.getName(), e.getMessage());
                         errors.add(error);
 
                         if (!continueOnError) {
                             throw new Exception(error);
                         }
                     }
-                } catch (Exception e) {
-                    iterationSuccess = false;
-                    String error = String.format("Iteration %d failed at step '%s': %s",
-                            i, nestedStep.getName(), e.getMessage());
-                    errors.add(error);
-
-                    if (!continueOnError) {
-                        throw new Exception(error);
-                    }
                 }
+            } finally {
+                Map<String, Object> scopedVars = context.getVariableContext().popScope();
+                // Remove loop-specific helper variables so they don't escape
+                scopedVars.remove(itemVariable);
+                scopedVars.remove(indexVariable);
+                scopedVars.forEach(context::setVariable);
             }
 
             if (iterationSuccess) {

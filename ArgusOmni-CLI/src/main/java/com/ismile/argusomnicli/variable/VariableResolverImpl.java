@@ -49,7 +49,24 @@ public class VariableResolverImpl implements VariableResolver {
         }
 
         if (obj instanceof String) {
-            return resolve((String) obj, context);
+            String str = (String) obj;
+
+            // Check if it's a single variable reference: {{variableName}}
+            // If so, return the actual object without converting to String
+            if (str.matches("^\\{\\{[^}]+\\}\\}$")) {
+                String expression = str.substring(2, str.length() - 2).trim();
+
+                // Handle nested property access
+                if (expression.contains(".")) {
+                    return resolveNestedProperty(expression, context);
+                }
+
+                // Return the actual object, not its string representation
+                return context.get(expression);
+            }
+
+            // Otherwise, resolve as string template
+            return resolve(str, context);
         }
 
         if (obj instanceof Map) {
@@ -84,8 +101,48 @@ public class VariableResolverImpl implements VariableResolver {
             return functions.execute(functionName, resolvedArg);
         }
 
+        // Check for nested property access (e.g., loopItem.name)
+        expression = expression.trim();
+        if (expression.contains(".")) {
+            Object value = resolveNestedProperty(expression, context);
+            return value != null ? value.toString() : "";
+        }
+
         // Simple variable lookup
-        Object value = context.get(expression.trim());
+        Object value = context.get(expression);
         return value != null ? value.toString() : "";
+    }
+
+    /**
+     * Resolve nested property access like "loopItem.name" or "user.address.city"
+     */
+    private Object resolveNestedProperty(String expression, VariableContext context) {
+        String[] parts = expression.split("\\.");
+
+        // Get root variable
+        Object current = context.get(parts[0]);
+        if (current == null) {
+            return null;
+        }
+
+        // Navigate through nested properties
+        for (int i = 1; i < parts.length; i++) {
+            String property = parts[i];
+
+            if (current instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> map = (Map<String, Object>) current;
+                current = map.get(property);
+            } else {
+                // If it's not a Map, we can't access properties
+                return null;
+            }
+
+            if (current == null) {
+                return null;
+            }
+        }
+
+        return current;
     }
 }

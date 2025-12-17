@@ -10,6 +10,7 @@ import com.ismile.argusomnicli.runner.ExecutionContext;
 import com.ismile.argusomnicli.variable.VariableResolver;
 import com.jayway.jsonpath.JsonPath;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -33,7 +34,7 @@ public class LoopExecutor extends AbstractExecutor {
 
     public LoopExecutor(VariableResolver variableResolver,
                        ResponseExtractor responseExtractor,
-                       List<TestExecutor> executors,
+                       @Lazy List<TestExecutor> executors,
                        Asserter asserter,
                        ObjectMapper objectMapper) {
         super(variableResolver, responseExtractor);

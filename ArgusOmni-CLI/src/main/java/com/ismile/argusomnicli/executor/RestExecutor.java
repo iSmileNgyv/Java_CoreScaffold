@@ -206,8 +206,21 @@ public class RestExecutor extends AbstractExecutor {
             } else if (config.getBody() != null) {
                 // Handle regular JSON body
                 Object resolvedBody = variableResolver.resolveObject(config.getBody(), context.getVariableContext());
+
+                if (context.isVerbose()) {
+                    System.out.println("  📤 Resolved body type: " + resolvedBody.getClass().getName());
+                    System.out.println("  📤 Resolved body: " + resolvedBody);
+                }
+
+                // Serialize to JSON string to ensure proper JSON encoding
+                String jsonBody = objectMapper.writeValueAsString(resolvedBody);
+
+                if (context.isVerbose()) {
+                    System.out.println("  📤 JSON body: " + jsonBody);
+                }
+
                 finalRequest = request.contentType(MediaType.APPLICATION_JSON)
-                        .bodyValue(resolvedBody);
+                        .bodyValue(jsonBody);
             } else {
                 finalRequest = request;
             }
@@ -245,8 +258,15 @@ public class RestExecutor extends AbstractExecutor {
             String responseBody = responseEntity.getBody();
             if (responseBody != null && !responseBody.isEmpty()) {
                 try {
-                    return objectMapper.readValue(responseBody, Object.class);
+                    Object parsedResponse = objectMapper.readValue(responseBody, Object.class);
+                    if (context.isVerbose()) {
+                        System.out.println("  📥 Response: " + objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(parsedResponse));
+                    }
+                    return parsedResponse;
                 } catch (Exception e) {
+                    if (context.isVerbose()) {
+                        System.out.println("  📥 Response (non-JSON): " + responseBody);
+                    }
                     return responseBody;
                 }
             }

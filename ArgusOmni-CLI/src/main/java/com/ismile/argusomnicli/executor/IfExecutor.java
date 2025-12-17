@@ -7,6 +7,7 @@ import com.ismile.argusomnicli.model.StepType;
 import com.ismile.argusomnicli.model.TestStep;
 import com.ismile.argusomnicli.runner.ExecutionContext;
 import com.ismile.argusomnicli.variable.VariableResolver;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -25,7 +26,7 @@ public class IfExecutor extends AbstractExecutor {
 
     public IfExecutor(VariableResolver variableResolver,
                      ResponseExtractor responseExtractor,
-                     List<TestExecutor> executors,
+                     @Lazy List<TestExecutor> executors,
                      Asserter asserter) {
         super(variableResolver, responseExtractor);
         this.executors = executors;

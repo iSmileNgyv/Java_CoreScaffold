@@ -5,6 +5,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -13,6 +16,8 @@ public class PullResult {
     private boolean success;
     private String message;
     private int commitsDownloaded;
+    @Builder.Default
+    private List<String> changedFiles = new ArrayList<>();
 
     public static PullResult success(String message, int commitsDownloaded) {
         return PullResult.builder()

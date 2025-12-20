@@ -3,6 +3,7 @@ package com.ismile.core.chronovcs.controller;
 import com.ismile.core.chronovcs.dto.auth.LoginRequest;
 import com.ismile.core.chronovcs.dto.auth.LoginResponse;
 import com.ismile.core.chronovcs.dto.auth.RefreshTokenRequest;
+import com.ismile.core.chronovcs.dto.auth.RegisterRequest;
 import com.ismile.core.chronovcs.dto.token.CreateTokenRequest;
 import com.ismile.core.chronovcs.dto.token.TokenResponse;
 import com.ismile.core.chronovcs.entity.UserEntity;
@@ -26,6 +27,16 @@ public class AuthController {
     private final AuthService authService;
     private final TokenService tokenService;
     private final UserRepository userRepository;
+
+    /**
+     * Register Endpoint
+     * URL: POST /api/auth/register
+     * Body: { "email": "...", "password": "...", "displayName": "..." }
+     */
+    @PostMapping("/register")
+    public ResponseEntity<LoginResponse> register(@Valid @RequestBody RegisterRequest request) {
+        return ResponseEntity.ok(authService.register(request));
+    }
 
     /**
      * WEB Login Endpoint

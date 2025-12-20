@@ -3,6 +3,7 @@ package com.ismile.core.chronovcscli.commands;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ismile.core.chronovcscli.auth.CredentialsEntry;
 import com.ismile.core.chronovcscli.auth.CredentialsService;
+import com.ismile.core.chronovcscli.core.index.IndexEngine;
 import com.ismile.core.chronovcscli.remote.RemoteCloneService;
 import com.ismile.core.chronovcscli.remote.RemoteConfig;
 import com.ismile.core.chronovcscli.remote.dto.BatchObjectsResponseDto;
@@ -30,6 +31,7 @@ public class CloneCommand implements Runnable {
 
     private final RemoteCloneService remoteCloneService;
     private final CredentialsService credentialsService;
+    private final IndexEngine indexEngine;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Parameters(index = "0", description = "Remote URL (e.g., http://localhost:8080)")
@@ -186,7 +188,7 @@ public class CloneCommand implements Runnable {
 
         for (CommitSnapshotDto commit : history.getCommits()) {
             String commitHash = commit.getId();
-            File commitFile = new File(targetDir, ".vcs/commits/" + commitHash);
+            File commitFile = new File(targetDir, ".vcs/commits/" + commitHash + ".json");
 
             String commitJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(commit);
             Files.writeString(commitFile.toPath(), commitJson);
@@ -227,6 +229,9 @@ public class CloneCommand implements Runnable {
             return;
         }
 
+        // Load index (will create empty if doesn't exist)
+        indexEngine.loadIndex(targetDir);
+
         for (Map.Entry<String, String> entry : commit.getFiles().entrySet()) {
             String filePath = entry.getKey();
             String blobHash = entry.getValue();
@@ -242,7 +247,13 @@ public class CloneCommand implements Runnable {
             File file = new File(targetDir, filePath);
             file.getParentFile().mkdirs();
             Files.write(file.toPath(), content);
+
+            // Add file to index
+            indexEngine.updateFile(filePath, blobHash);
         }
+
+        // Save index
+        indexEngine.saveIndex(targetDir);
 
         System.out.println("Checked out " + commit.getFiles().size() + " files");
     }

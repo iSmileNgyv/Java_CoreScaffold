@@ -13,6 +13,13 @@ spring:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
 server:
   port: 8081
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-exception: false
+    include-stacktrace: never
+    whitelabel:
+      enabled: false
 
 chronovcs:
   storage:

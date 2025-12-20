@@ -3,6 +3,7 @@ package com.ismile.core.chronovcs.service.auth;
 import com.ismile.core.chronovcs.config.security.ChronoUserPrincipal;
 import com.ismile.core.chronovcs.dto.auth.LoginRequest;
 import com.ismile.core.chronovcs.dto.auth.LoginResponse;
+import com.ismile.core.chronovcs.dto.auth.RegisterRequest;
 import com.ismile.core.chronovcs.entity.RefreshTokenEntity;
 import com.ismile.core.chronovcs.entity.UserEntity;
 import com.ismile.core.chronovcs.repository.RefreshTokenRepository;
@@ -28,6 +29,51 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService jwtTokenService;
     private final RefreshTokenProvider refreshTokenProvider; // Yeni
+
+    @Transactional
+    public LoginResponse register(RegisterRequest request) {
+        // 1. Email artıq mövcuddursa error
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new BadCredentialsException("Email already exists");
+        }
+
+        // 2. Yeni user yarat
+        UserEntity user = UserEntity.builder()
+                .email(request.getEmail())
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .displayName(request.getDisplayName())
+                .active(true)
+                .emailVerified(false)
+                .build();
+
+        userRepository.save(user);
+
+        // 3. Access Token yarat (JWT)
+        AuthenticatedUser authUser = AuthenticatedUser.fromEntity(user);
+        String accessToken = jwtTokenService.generateAccessToken(new ChronoUserPrincipal(authUser));
+
+        // 4. Refresh Token yarat (Random String)
+        String rawRefreshToken = refreshTokenProvider.generateToken();
+
+        // 5. Refresh Token-i Hash-lə və Bazada saxla
+        String tokenHash = hashToken(rawRefreshToken);
+
+        RefreshTokenEntity refreshTokenEntity = RefreshTokenEntity.builder()
+                .user(user)
+                .tokenHash(tokenHash)
+                .expiresAt(LocalDateTime.now().plusDays(7)) // 7 gün vaxt
+                .build();
+
+        refreshTokenRepository.save(refreshTokenEntity);
+
+        // 6. Cavabı qaytar
+        return LoginResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(rawRefreshToken)
+                .email(user.getEmail())
+                .userUid(user.getUserUid())
+                .build();
+    }
 
     @Transactional
     public LoginResponse login(LoginRequest request) {

@@ -2,11 +2,13 @@ package com.ismile.core.chronovcscli.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ismile.core.chronovcscli.core.commit.CommitModel;
+import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 
+@Component
 public class VcsDirectoryManager {
 
     private static final ObjectMapper mapper = new ObjectMapper();

@@ -153,7 +153,7 @@ public class PullService {
 
         // 4. Write new commits to local storage
         for (CommitSnapshotDto commit : newCommits) {
-            File commitFile = new File(projectRoot, ".vcs/commits/" + commit.getId());
+            File commitFile = new File(projectRoot, ".vcs/commits/" + commit.getId() + ".json");
             String commitJson = objectMapper.writerWithDefaultPrettyPrinter()
                     .writeValueAsString(commit);
             Files.writeString(commitFile.toPath(), commitJson);
@@ -167,12 +167,14 @@ public class PullService {
 
         // 6. Checkout latest commit (update working directory)
         CommitSnapshotDto latestCommit = newCommits.get(0);
-        checkoutCommit(projectRoot, latestCommit, allObjects);
+        List<String> changedFiles = checkoutCommit(projectRoot, latestCommit, allObjects);
 
-        return PullResult.success(
-                "Fast-forward: " + analysis.getLocalHead() + ".." + remoteHead,
-                newCommits.size()
-        );
+        return PullResult.builder()
+                .success(true)
+                .message("Fast-forward: " + analysis.getLocalHead() + ".." + remoteHead)
+                .commitsDownloaded(newCommits.size())
+                .changedFiles(changedFiles)
+                .build();
     }
 
     private File getBlobFile(File projectRoot, String hash) {
@@ -181,15 +183,15 @@ public class PullService {
         return new File(projectRoot, ".vcs/objects/" + prefix + "/" + suffix);
     }
 
-    private void checkoutCommit(File projectRoot,
-                                 CommitSnapshotDto commit,
-                                 Map<String, String> objects) throws Exception {
+    private List<String> checkoutCommit(File projectRoot,
+                                         CommitSnapshotDto commit,
+                                         Map<String, String> objects) throws Exception {
+
+        List<String> changedFiles = new ArrayList<>();
 
         if (commit.getFiles() == null || commit.getFiles().isEmpty()) {
-            return;
+            return changedFiles;
         }
-
-        int checkedOut = 0;
 
         for (Map.Entry<String, String> entry : commit.getFiles().entrySet()) {
             String filePath = entry.getKey();
@@ -214,10 +216,11 @@ public class PullService {
             File file = new File(projectRoot, filePath);
             file.getParentFile().mkdirs();
             Files.write(file.toPath(), content);
-            checkedOut++;
+            changedFiles.add(filePath);
         }
 
-        log.info("Checked out {} files", checkedOut);
+        log.info("Checked out {} files", changedFiles.size());
+        return changedFiles;
     }
 
     private PullResult performMerge(File projectRoot,
@@ -283,7 +286,7 @@ public class PullService {
 
         // Write new commits to local storage
         for (CommitSnapshotDto commit : remoteCommits) {
-            File commitFile = new File(projectRoot, ".vcs/commits/" + commit.getId());
+            File commitFile = new File(projectRoot, ".vcs/commits/" + commit.getId() + ".json");
             if (!commitFile.exists()) {
                 String commitJson = objectMapper.writerWithDefaultPrettyPrinter()
                         .writeValueAsString(commit);

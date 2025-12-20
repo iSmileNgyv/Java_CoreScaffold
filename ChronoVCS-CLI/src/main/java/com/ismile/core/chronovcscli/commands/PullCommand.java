@@ -42,7 +42,7 @@ public class PullCommand implements Runnable {
             }
 
             // 2. Load remote config
-            File remoteFile = new File(projectRoot, ".vcs/remote");
+            File remoteFile = new File(projectRoot, ".vcs/remote.json");
             if (!remoteFile.exists()) {
                 System.out.println("Error: No remote configured");
                 System.out.println("Run 'chronovcs remote-config <url> <repo-key>' first");
@@ -73,7 +73,17 @@ public class PullCommand implements Runnable {
                 if (result.getCommitsDownloaded() > 0) {
                     System.out.println("Downloaded " + result.getCommitsDownloaded() + " new commit(s)");
                 }
-                System.out.println("Pull successful!");
+
+                // Display changed files as IDE-clickable links
+                if (result.getChangedFiles() != null && !result.getChangedFiles().isEmpty()) {
+                    System.out.println("\nChanged files:");
+                    for (String file : result.getChangedFiles()) {
+                        // Format: file:1 (IDE-clickable)
+                        System.out.println("  " + file + ":1");
+                    }
+                }
+
+                System.out.println("\nPull successful!");
             } else {
                 System.out.println("Pull failed:");
                 System.out.println(result.getMessage());

@@ -111,6 +111,25 @@ public class CheckoutCommand implements Runnable {
             // Check if target is a branch
             File branchFile = new File(projectRoot, ".vcs/refs/heads/" + target);
             if (branchFile.exists()) {
+                // Verify that the commit exists locally
+                String branchHead = Files.readString(branchFile.toPath()).trim();
+                File commitFile = new File(projectRoot, ".vcs/commits/" + branchHead + ".json");
+
+                if (!commitFile.exists()) {
+                    // Commit doesn't exist locally, try to fetch from remote
+                    System.out.println("Branch '" + target + "' exists but commit is missing locally.");
+                    System.out.println("Attempting to fetch from remote...");
+
+                    if (tryCheckoutRemoteBranch(projectRoot, target)) {
+                        return;
+                    } else {
+                        System.out.println("Error: Failed to fetch branch '" + target + "' from remote");
+                        System.out.println("Hint: The branch exists locally but points to a commit that doesn't exist.");
+                        System.out.println("Try running 'chronovcs pull' or delete the branch and checkout again.");
+                        return;
+                    }
+                }
+
                 // Checkout branch
                 checkoutService.checkoutBranch(projectRoot, target);
                 System.out.println("Switched to branch '" + target + "'");
@@ -178,16 +197,22 @@ public class CheckoutCommand implements Runnable {
             // Fetch commits for the branch
             fetchCommitsForBranch(projectRoot, remoteConfig, creds, branchName, remoteBranchHead);
 
-            // Create local branch pointing to remote HEAD
+            // Create or update local branch pointing to remote HEAD
             File branchFile = new File(projectRoot, ".vcs/refs/heads/" + branchName);
             branchFile.getParentFile().mkdirs();
+            boolean branchExisted = branchFile.exists();
             Files.writeString(branchFile.toPath(), remoteBranchHead);
 
             // Checkout the branch
             checkoutService.checkoutBranch(projectRoot, branchName);
 
-            System.out.println("Branch '" + branchName + "' set up to track remote branch.");
-            System.out.println("Switched to a new branch '" + branchName + "'");
+            if (branchExisted) {
+                System.out.println("Branch '" + branchName + "' updated from remote.");
+                System.out.println("Switched to branch '" + branchName + "'");
+            } else {
+                System.out.println("Branch '" + branchName + "' set up to track remote branch.");
+                System.out.println("Switched to a new branch '" + branchName + "'");
+            }
 
             return true;
 

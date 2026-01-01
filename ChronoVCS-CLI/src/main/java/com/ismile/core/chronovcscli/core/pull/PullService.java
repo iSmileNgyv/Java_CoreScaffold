@@ -2,6 +2,7 @@ package com.ismile.core.chronovcscli.core.pull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ismile.core.chronovcscli.auth.CredentialsEntry;
+import com.ismile.core.chronovcscli.core.index.IndexEngine;
 import com.ismile.core.chronovcscli.core.merge.MergeEngine;
 import com.ismile.core.chronovcscli.core.merge.MergeResult;
 import com.ismile.core.chronovcscli.core.merge.MergeStrategy;
@@ -28,6 +29,7 @@ public class PullService {
     private final LocalCommitReader localCommitReader;
     private final CommitComparator commitComparator;
     private final MergeEngine mergeEngine;
+    private final IndexEngine indexEngine;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
@@ -193,9 +195,25 @@ public class PullService {
             return changedFiles;
         }
 
+        // Load and clear the index - we'll rebuild it from the commit
+        indexEngine.loadIndex(projectRoot);
+
+        // Save current index entries before clearing (to detect changes)
+        Map<String, String> previousIndexEntries = new HashMap<>(indexEngine.getEntries());
+
+        // Remove all files from index (we'll add them back from the commit)
+        Map<String, String> currentIndexEntries = indexEngine.getEntries();
+        for (String filePath : new ArrayList<>(currentIndexEntries.keySet())) {
+            indexEngine.removeFile(filePath);
+        }
+
         for (Map.Entry<String, String> entry : commit.getFiles().entrySet()) {
             String filePath = entry.getKey();
             String blobHash = entry.getValue();
+
+            // Check if this file has changed (new file or different hash)
+            String previousHash = previousIndexEntries.get(filePath);
+            boolean fileChanged = previousHash == null || !previousHash.equals(blobHash);
 
             // Try to get from downloaded objects first
             String base64Content = objects.get(blobHash);
@@ -216,10 +234,20 @@ public class PullService {
             File file = new File(projectRoot, filePath);
             file.getParentFile().mkdirs();
             Files.write(file.toPath(), content);
-            changedFiles.add(filePath);
+
+            // Update index to reflect the checked out file
+            indexEngine.updateFile(filePath, blobHash);
+
+            // Only add to changedFiles if the file actually changed
+            if (fileChanged) {
+                changedFiles.add(filePath);
+            }
         }
 
-        log.info("Checked out {} files", changedFiles.size());
+        // Save updated index
+        indexEngine.saveIndex(projectRoot);
+
+        log.info("Checked out {} files, {} changed", commit.getFiles().size(), changedFiles.size());
         return changedFiles;
     }
 

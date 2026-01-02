@@ -16,6 +16,7 @@ public class CreateRepositoryResponseDto {
     private boolean privateRepo;
     private String versioningMode;
     private String defaultBranch;
+    private boolean releaseEnabled;
     private String ownerUid;
     private LocalDateTime createdAt;
 }

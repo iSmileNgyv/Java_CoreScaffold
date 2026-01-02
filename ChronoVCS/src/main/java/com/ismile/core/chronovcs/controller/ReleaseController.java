@@ -35,6 +35,31 @@ public class ReleaseController {
     }
 
     /**
+     * Get the latest release for repository
+     * GET /api/repositories/{repoKey}/releases/latest
+     */
+    @GetMapping("/latest")
+    public ResponseEntity<ReleaseResponse> getLatestRelease(@PathVariable String repoKey) {
+        log.info("GET /api/repositories/{}/releases/latest - Fetching latest release", repoKey);
+        ReleaseResponse release = releaseService.getLatestRelease(repoKey);
+        return ResponseEntity.ok(release);
+    }
+
+    /**
+     * Get a specific release by version
+     * GET /api/repositories/{repoKey}/releases/{version}
+     */
+    @GetMapping("/{version}")
+    public ResponseEntity<ReleaseResponse> getRelease(
+            @PathVariable String repoKey,
+            @PathVariable String version
+    ) {
+        log.info("GET /api/repositories/{}/releases/{} - Fetching release", repoKey, version);
+        ReleaseResponse release = releaseService.getRelease(repoKey, version);
+        return ResponseEntity.ok(release);
+    }
+
+    /**
      * Recommend version based on JIRA tasks
      * GET /api/repositories/{repoKey}/releases/recommend?jiraIssues=PROJ-123,PROJ-456
      */

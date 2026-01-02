@@ -17,6 +17,7 @@ public class ReleaseResponse {
     private String version;
     private String versionType;
     private String message;
+    private String snapshotCommitId;
     private String createdBy;
     private LocalDateTime createdAt;
     private List<ReleaseTaskDto> tasks;

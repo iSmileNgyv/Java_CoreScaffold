@@ -1,6 +1,7 @@
 package com.ismile.core.chronovcs.dto.push;
 
 import lombok.Data;
+import java.util.List;
 import java.util.Map;
 
 @Data
@@ -15,4 +16,10 @@ public class CommitSnapshotDto {
      * filename -> blobHash
      */
     private Map<String, String> files;
+
+    /**
+     * Detailed file entries with URLs for content access.
+     * This is optional and may be omitted for large responses.
+     */
+    private List<CommitFileEntryDto> fileEntries;
 }

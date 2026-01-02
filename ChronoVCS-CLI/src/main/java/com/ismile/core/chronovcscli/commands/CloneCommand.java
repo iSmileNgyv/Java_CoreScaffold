@@ -10,11 +10,14 @@ import com.ismile.core.chronovcscli.remote.dto.BatchObjectsResponseDto;
 import com.ismile.core.chronovcscli.remote.dto.CommitHistoryResponseDto;
 import com.ismile.core.chronovcscli.remote.dto.CommitSnapshotDto;
 import com.ismile.core.chronovcscli.remote.dto.RefsResponseDto;
+import com.ismile.core.chronovcscli.remote.dto.ReleaseResponseDto;
+import com.ismile.core.chronovcscli.core.release.ReleaseState;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
+import picocli.CommandLine.Option;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -43,6 +46,9 @@ public class CloneCommand implements Runnable {
     @Parameters(index = "2", description = "Target directory", defaultValue = ".")
     private String targetDir;
 
+    @Option(names = {"--release"}, description = "Release version to clone (use 'latest')")
+    private String releaseVersion;
+
     @Override
     public void run() {
         try {
@@ -69,6 +75,11 @@ public class CloneCommand implements Runnable {
             File vcsDir = new File(targetDirectory, ".vcs");
             if (vcsDir.exists()) {
                 System.out.println("Error: .vcs directory already exists in " + targetDir);
+                return;
+            }
+
+            if (releaseVersion != null) {
+                cloneRelease(targetDirectory, config, creds);
                 return;
             }
 
@@ -127,6 +138,58 @@ public class CloneCommand implements Runnable {
             log.error("Clone failed", e);
             System.out.println("Error: Clone failed - " + e.getMessage());
         }
+    }
+
+    private void cloneRelease(File targetDirectory, RemoteConfig config, CredentialsEntry creds) throws Exception {
+        ReleaseResponseDto release = "latest".equalsIgnoreCase(releaseVersion)
+                ? remoteCloneService.getLatestRelease(config, creds)
+                : remoteCloneService.getRelease(config, creds, releaseVersion);
+
+        String snapshotCommitId = release.getSnapshotCommitId();
+        if (snapshotCommitId == null || snapshotCommitId.isBlank()) {
+            throw new IllegalStateException("Release has no snapshot commit: " + release.getVersion());
+        }
+
+        System.out.println("Cloning release '" + release.getVersion() + "'...");
+
+        RefsResponseDto refs = remoteCloneService.getRefs(config, creds);
+        String defaultBranch = refs.getDefaultBranch() != null ? refs.getDefaultBranch() : "main";
+
+        CommitSnapshotDto snapshot = remoteCloneService.getCommit(config, creds, snapshotCommitId);
+
+        CommitHistoryResponseDto history = new CommitHistoryResponseDto();
+        history.setCommits(List.of(snapshot));
+        history.setHasMore(false);
+
+        Set<String> allBlobHashes = new HashSet<>();
+        if (snapshot.getFiles() != null) {
+            allBlobHashes.addAll(snapshot.getFiles().values());
+        }
+
+        System.out.println("Downloading " + allBlobHashes.size() + " objects...");
+        Map<String, String> allObjects = new HashMap<>();
+
+        List<String> hashList = new ArrayList<>(allBlobHashes);
+        int batchSize = 50;
+        for (int i = 0; i < hashList.size(); i += batchSize) {
+            int end = Math.min(i + batchSize, hashList.size());
+            List<String> batch = hashList.subList(i, end);
+
+            BatchObjectsResponseDto batchResponse = remoteCloneService.getBatchObjects(config, creds, batch);
+            allObjects.putAll(batchResponse.getObjects());
+
+            System.out.println("Downloaded " + allObjects.size() + "/" + allBlobHashes.size() + " objects");
+        }
+
+        RefsResponseDto releaseRefs = new RefsResponseDto();
+        releaseRefs.setDefaultBranch(defaultBranch);
+        releaseRefs.setBranches(Map.of(defaultBranch, snapshotCommitId));
+
+        setupLocalRepository(targetDirectory, defaultBranch, releaseRefs, history, allObjects, config);
+        ReleaseState.save(targetDirectory, new ReleaseState(release.getVersion(), snapshotCommitId));
+
+        System.out.println("Release clone completed successfully!");
+        System.out.println("Repository cloned to: " + targetDirectory.getAbsolutePath());
     }
 
     private void initEmptyRepository(File targetDir, String defaultBranch, RemoteConfig config) throws Exception {

@@ -3,6 +3,7 @@ package com.ismile.core.chronovcs.service.release;
 import com.ismile.core.chronovcs.dto.release.*;
 import com.ismile.core.chronovcs.entity.*;
 import com.ismile.core.chronovcs.repository.*;
+import com.ismile.core.chronovcs.service.storage.CommitStorage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ public class ReleaseService {
     private final RepositoryRepository repositoryRepository;
     private final RepositorySettingsRepository settingsRepository;
     private final UserRepository userRepository;
+    private final CommitStorage commitStorage;
 
     /**
      * Create a new release
@@ -31,9 +33,26 @@ public class ReleaseService {
         RepositoryEntity repository = repositoryRepository.findByRepoKey(repoKey)
                 .orElseThrow(() -> new RuntimeException("Repository not found: " + repoKey));
 
+        RepositorySettingsEntity settings = settingsRepository.findByRepositoryId(repository.getId())
+                .orElseGet(() -> settingsRepository.save(
+                        RepositorySettingsEntity.builder()
+                                .repository(repository)
+                                .build()
+                ));
+
+        if (!Boolean.TRUE.equals(settings.getReleaseEnabled())) {
+            throw new IllegalArgumentException("Release is disabled for this repository");
+        }
+
         // Get current user
         UserEntity user = userRepository.findByEmailAndActiveTrue(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        String defaultBranch = repository.getDefaultBranch();
+        String headCommitId = commitStorage.getBranchHead(repository, defaultBranch);
+        if (headCommitId == null || headCommitId.isBlank()) {
+            throw new IllegalArgumentException("Cannot create release: default branch has no commits");
+        }
 
         // Determine version
         String version = determineVersion(repository, request);
@@ -49,6 +68,7 @@ public class ReleaseService {
                 .version(version)
                 .versionType(request.getVersionType())
                 .message(request.getMessage())
+                .snapshotCommitId(headCommitId)
                 .createdBy(user)
                 .build();
 
@@ -135,6 +155,32 @@ public class ReleaseService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Get a release by version for repository.
+     */
+    public ReleaseResponse getRelease(String repoKey, String version) {
+        RepositoryEntity repository = repositoryRepository.findByRepoKey(repoKey)
+                .orElseThrow(() -> new RuntimeException("Repository not found"));
+
+        ReleaseEntity release = releaseRepository.findByRepositoryIdAndVersion(repository.getId(), version)
+                .orElseThrow(() -> new RuntimeException("Release not found: " + version));
+
+        return toResponse(release);
+    }
+
+    /**
+     * Get the latest release for repository.
+     */
+    public ReleaseResponse getLatestRelease(String repoKey) {
+        RepositoryEntity repository = repositoryRepository.findByRepoKey(repoKey)
+                .orElseThrow(() -> new RuntimeException("Repository not found"));
+
+        ReleaseEntity release = releaseRepository.findLatestByRepositoryId(repository.getId())
+                .orElseThrow(() -> new RuntimeException("No releases found for repository: " + repoKey));
+
+        return toResponse(release);
+    }
+
     private String determineVersion(RepositoryEntity repository, CreateReleaseRequest request) {
         // If version is explicitly provided, use it
         if (request.getVersion() != null && !request.getVersion().trim().isEmpty()) {
@@ -168,6 +214,7 @@ public class ReleaseService {
                 .version(entity.getVersion())
                 .versionType(entity.getVersionType())
                 .message(entity.getMessage())
+                .snapshotCommitId(entity.getSnapshotCommitId())
                 .createdBy(entity.getCreatedBy() != null ? entity.getCreatedBy().getEmail() : null)
                 .createdAt(entity.getCreatedAt())
                 .tasks(tasks)

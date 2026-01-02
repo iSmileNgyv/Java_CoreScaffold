@@ -9,13 +9,20 @@ import com.ismile.core.chronovcs.dto.repository.CreateRepositoryResponseDto;
 import com.ismile.core.chronovcs.dto.repository.RepositoryInfoDto;
 import com.ismile.core.chronovcs.entity.*;
 import com.ismile.core.chronovcs.exception.RepositoryNotFoundException;
+import com.ismile.core.chronovcs.repository.RepoPermissionRepository;
 import com.ismile.core.chronovcs.repository.RepositoryRepository;
+import com.ismile.core.chronovcs.repository.RepositorySettingsRepository;
 import com.ismile.core.chronovcs.repository.UserRepository;
 import com.ismile.core.chronovcs.service.auth.AuthenticatedUser;
 import com.ismile.core.chronovcs.service.permission.PermissionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +31,8 @@ public class RepositoryService {
     private final PermissionService permissionService;
     private final RepositoryRepository repositoryRepository;
     private final UserRepository userRepository;
+    private final RepositorySettingsRepository settingsRepository;
+    private final RepoPermissionRepository repoPermissionRepository;
 
     public HandshakeResponse handshake(AuthenticatedUser user, String repoKey) {
 
@@ -75,6 +84,9 @@ public class RepositoryService {
 
     public RepositoryInfoDto getRepositoryInfo(String repoKey) {
         RepositoryEntity repository = getByKeyOrThrow(repoKey);
+        boolean releaseEnabled = settingsRepository.findByRepositoryId(repository.getId())
+                .map(RepositorySettingsEntity::getReleaseEnabled)
+                .orElse(false);
         return RepositoryInfoDto.builder()
                 .id(repository.getId())
                 .key(repository.getRepoKey())
@@ -83,10 +95,53 @@ public class RepositoryService {
                 .privateRepo(repository.isPrivateRepo())
                 .versioningMode(repository.getVersioningMode().name())
                 .defaultBranch(repository.getDefaultBranch())
+                .releaseEnabled(releaseEnabled)
                 .ownerUid(repository.getOwner().getUserUid())
                 .createdAt(repository.getCreatedAt())
                 .updatedAt(repository.getUpdatedAt())
                 .build();
+    }
+
+    public List<RepositoryInfoDto> listRepositories(AuthenticatedUser user) {
+        UserEntity owner = userRepository.findById(user.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found: " + user.getUserId()));
+
+        List<RepositoryEntity> ownedRepos = repositoryRepository.findAllByOwnerId(owner.getId());
+        List<RepoPermissionEntity> permittedRepos = repoPermissionRepository.findAllByUserSettings(owner);
+
+        Map<Long, RepositoryEntity> uniqueRepos = new LinkedHashMap<>();
+        for (RepositoryEntity repository : ownedRepos) {
+            uniqueRepos.put(repository.getId(), repository);
+        }
+        for (RepoPermissionEntity permission : permittedRepos) {
+            RepositoryEntity repository = permission.getRepository();
+            if (repository != null) {
+                uniqueRepos.putIfAbsent(repository.getId(), repository);
+            }
+        }
+
+        List<RepositoryInfoDto> result = new ArrayList<>();
+        for (RepositoryEntity repository : uniqueRepos.values()) {
+            boolean releaseEnabled = settingsRepository.findByRepositoryId(repository.getId())
+                    .map(RepositorySettingsEntity::getReleaseEnabled)
+                    .orElse(false);
+
+            result.add(RepositoryInfoDto.builder()
+                    .id(repository.getId())
+                    .key(repository.getRepoKey())
+                    .name(repository.getName())
+                    .description(repository.getDescription())
+                    .privateRepo(repository.isPrivateRepo())
+                    .versioningMode(repository.getVersioningMode().name())
+                    .defaultBranch(repository.getDefaultBranch())
+                    .releaseEnabled(releaseEnabled)
+                    .ownerUid(repository.getOwner().getUserUid())
+                    .createdAt(repository.getCreatedAt())
+                    .updatedAt(repository.getUpdatedAt())
+                    .build());
+        }
+
+        return result;
     }
 
     @Transactional
@@ -116,6 +171,13 @@ public class RepositoryService {
         // Save repository
         repository = repositoryRepository.save(repository);
 
+        // Create repository settings
+        RepositorySettingsEntity settings = RepositorySettingsEntity.builder()
+                .repository(repository)
+                .releaseEnabled(request.getReleaseEnabled() != null && request.getReleaseEnabled())
+                .build();
+        settingsRepository.save(settings);
+
         // Build response
         return CreateRepositoryResponseDto.builder()
                 .id(repository.getId())
@@ -125,6 +187,7 @@ public class RepositoryService {
                 .privateRepo(repository.isPrivateRepo())
                 .versioningMode(repository.getVersioningMode().name())
                 .defaultBranch(repository.getDefaultBranch())
+                .releaseEnabled(settings.getReleaseEnabled())
                 .ownerUid(owner.getUserUid())
                 .createdAt(repository.getCreatedAt())
                 .build();

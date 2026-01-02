@@ -28,8 +28,9 @@ public class JwtTokenService {
 
         // DÜZƏLİŞ: User ID-ni tokenə əlavə edirik
         if (userDetails instanceof ChronoUserPrincipal) {
-            Long userId = ((ChronoUserPrincipal) userDetails).getUser().getUserId();
-            claims.put("userId", userId);
+            AuthenticatedUser user = ((ChronoUserPrincipal) userDetails).getUser();
+            claims.put("userId", user.getUserId());
+            claims.put("userUid", user.getUserUid());
         }
 
         return buildToken(claims, userDetails, jwtProperties.getAccessTtlSeconds() * 1000);
@@ -42,10 +43,12 @@ public class JwtTokenService {
         // DÜZƏLİŞ: User ID-ni tokendən geri oxuyuruq
         Claims claims = extractAllClaims(token);
         Long userId = claims.get("userId", Long.class);
+        String userUid = claims.get("userUid", String.class);
 
         AuthenticatedUser authUser = new AuthenticatedUser();
         authUser.setEmail(email);
         authUser.setUserId(userId); // <--- Ən vacib hissə budur!
+        authUser.setUserUid(userUid);
 
         return new ChronoUserPrincipal(authUser);
     }

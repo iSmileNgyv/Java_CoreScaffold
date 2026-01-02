@@ -9,17 +9,29 @@ import com.ismile.core.chronovcs.dto.push.CommitSnapshotDto;
 import com.ismile.core.chronovcs.dto.repository.CreateRepositoryRequestDto;
 import com.ismile.core.chronovcs.dto.repository.CreateRepositoryResponseDto;
 import com.ismile.core.chronovcs.dto.repository.RepositoryInfoDto;
+import com.ismile.core.chronovcs.dto.repository.RepositorySettingsResponseDto;
+import com.ismile.core.chronovcs.dto.repository.UpdateRepositorySettingsRequestDto;
+import com.ismile.core.chronovcs.dto.tree.TreeResponseDto;
+import com.ismile.core.chronovcs.entity.BlobEntity;
+import com.ismile.core.chronovcs.entity.RepositoryEntity;
 import com.ismile.core.chronovcs.service.auth.AuthenticatedUser;
 import com.ismile.core.chronovcs.service.clone.CloneService;
 import com.ismile.core.chronovcs.service.permission.PermissionService;
 import com.ismile.core.chronovcs.service.repository.RepositoryService;
+import com.ismile.core.chronovcs.service.repository.RepositorySettingsService;
+import com.ismile.core.chronovcs.service.storage.BlobStorageService;
 import com.ismile.core.chronovcs.web.CurrentUser;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/repositories")
@@ -30,6 +42,8 @@ public class RepositoryController {
     private final PermissionService permissionService;
     private final RepositoryService repositoryService;
     private final CloneService cloneService;
+    private final RepositorySettingsService repositorySettingsService;
+    private final BlobStorageService blobStorageService;
 
     @GetMapping("/{repoKey}/info")
     public ResponseEntity<RepositoryInfoDto> getRepoInfo(
@@ -42,10 +56,11 @@ public class RepositoryController {
     }
 
     @GetMapping
-    public ResponseEntity<String> listRepositories(
+    public ResponseEntity<List<RepositoryInfoDto>> listRepositories(
             @CurrentUser AuthenticatedUser user
     ) {
-        return ResponseEntity.ok("List of repositories for user: " + user.getUserUid());
+        List<RepositoryInfoDto> repositories = repositoryService.listRepositories(user);
+        return ResponseEntity.ok(repositories);
     }
 
     @PostMapping
@@ -55,6 +70,27 @@ public class RepositoryController {
     ) {
         CreateRepositoryResponseDto response = repositoryService.createRepository(user, request);
         return ResponseEntity.status(201).body(response);
+    }
+
+    @GetMapping("/{repoKey}/settings")
+    public ResponseEntity<RepositorySettingsResponseDto> getSettings(
+            @CurrentUser AuthenticatedUser user,
+            @PathVariable @Pattern(regexp = "^[a-zA-Z0-9_-]+$", message = "Invalid repository key") String repoKey
+    ) {
+        permissionService.assertCanManageRepo(user, repoKey);
+        RepositorySettingsResponseDto response = repositorySettingsService.getSettings(repoKey);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{repoKey}/settings")
+    public ResponseEntity<RepositorySettingsResponseDto> updateSettings(
+            @CurrentUser AuthenticatedUser user,
+            @PathVariable @Pattern(regexp = "^[a-zA-Z0-9_-]+$", message = "Invalid repository key") String repoKey,
+            @RequestBody UpdateRepositorySettingsRequestDto request
+    ) {
+        permissionService.assertCanManageRepo(user, repoKey);
+        RepositorySettingsResponseDto response = repositorySettingsService.updateSettings(repoKey, request);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{repoKey}/handshake")
@@ -73,6 +109,18 @@ public class RepositoryController {
     ) {
         permissionService.assertCanRead(user, repoKey);
         RefsResponseDto response = cloneService.getRefs(repoKey);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{repoKey}/tree")
+    public ResponseEntity<TreeResponseDto> getTree(
+            @CurrentUser AuthenticatedUser user,
+            @PathVariable String repoKey,
+            @RequestParam(required = false) String ref,
+            @RequestParam(required = false, defaultValue = "") String path
+    ) {
+        permissionService.assertCanRead(user, repoKey);
+        TreeResponseDto response = cloneService.getTree(repoKey, ref, path);
         return ResponseEntity.ok(response);
     }
 
@@ -109,5 +157,34 @@ public class RepositoryController {
         permissionService.assertCanRead(user, repoKey);
         BatchObjectsResponseDto response = cloneService.getBatchObjects(repoKey, request.getHashes());
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{repoKey}/blobs/{hash}")
+    public ResponseEntity<byte[]> getBlob(
+            @CurrentUser AuthenticatedUser user,
+            @PathVariable String repoKey,
+            @PathVariable String hash
+    ) {
+        permissionService.assertCanRead(user, repoKey);
+
+        RepositoryEntity repository = repositoryService.getByKeyOrThrow(repoKey);
+        BlobEntity blob = blobStorageService.findByHash(repository, hash)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Blob not found"));
+
+        byte[] content = blobStorageService.loadContent(blob);
+        MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
+        if (blob.getContentType() != null && !blob.getContentType().isBlank()) {
+            try {
+                mediaType = MediaType.parseMediaType(blob.getContentType());
+            } catch (IllegalArgumentException ignored) {
+                mediaType = MediaType.APPLICATION_OCTET_STREAM;
+            }
+        }
+
+        ResponseEntity.BodyBuilder builder = ResponseEntity.ok().contentType(mediaType);
+        if (blob.getContentSize() != null) {
+            builder.contentLength(blob.getContentSize());
+        }
+        return builder.body(content);
     }
 }

@@ -160,6 +160,99 @@ public class RemoteCloneService {
         }
     }
 
+    public RepositoryInfoResponseDto getRepositoryInfo(RemoteConfig config, CredentialsEntry creds) {
+        try {
+            String baseUrl = config.getBaseUrl().replaceAll("/$", "");
+            String url = baseUrl + "/api/repositories/" + config.getRepoKey() + "/info";
+
+            String basicToken = buildBasicAuth(creds);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("Authorization", "Basic " + basicToken)
+                    .header("Accept", "application/json")
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            int status = response.statusCode();
+            String body = response.body();
+
+            if (status < 200 || status >= 300) {
+                log.error("Get repository info failed. Status: {}, Body: {}", status, body);
+                throw new IllegalStateException("Get repository info failed with status " + status + ": " + body);
+            }
+
+            return objectMapper.readValue(body, RepositoryInfoResponseDto.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Get repository info failed: " + e.getMessage(), e);
+        }
+    }
+
+    public ReleaseResponseDto getRelease(RemoteConfig config,
+                                         CredentialsEntry creds,
+                                         String version) {
+        try {
+            String baseUrl = config.getBaseUrl().replaceAll("/$", "");
+            String url = baseUrl + "/api/repositories/" + config.getRepoKey() + "/releases/" + version;
+
+            String basicToken = buildBasicAuth(creds);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("Authorization", "Basic " + basicToken)
+                    .header("Accept", "application/json")
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            int status = response.statusCode();
+            String body = response.body();
+
+            if (status < 200 || status >= 300) {
+                log.error("Get release failed. Status: {}, Body: {}", status, body);
+                throw new IllegalStateException("Get release failed with status " + status + ": " + body);
+            }
+
+            return objectMapper.readValue(body, ReleaseResponseDto.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Get release failed: " + e.getMessage(), e);
+        }
+    }
+
+    public ReleaseResponseDto getLatestRelease(RemoteConfig config,
+                                               CredentialsEntry creds) {
+        try {
+            String baseUrl = config.getBaseUrl().replaceAll("/$", "");
+            String url = baseUrl + "/api/repositories/" + config.getRepoKey() + "/releases/latest";
+
+            String basicToken = buildBasicAuth(creds);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("Authorization", "Basic " + basicToken)
+                    .header("Accept", "application/json")
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            int status = response.statusCode();
+            String body = response.body();
+
+            if (status < 200 || status >= 300) {
+                log.error("Get latest release failed. Status: {}, Body: {}", status, body);
+                throw new IllegalStateException("Get latest release failed with status " + status + ": " + body);
+            }
+
+            return objectMapper.readValue(body, ReleaseResponseDto.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Get latest release failed: " + e.getMessage(), e);
+        }
+    }
+
     private String buildBasicAuth(CredentialsEntry entry) {
         String username;
 

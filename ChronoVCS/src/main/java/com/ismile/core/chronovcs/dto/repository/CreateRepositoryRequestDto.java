@@ -41,4 +41,10 @@ public class CreateRepositoryRequestDto {
     @Size(min = 1, max = 50, message = "Branch name must be between 1 and 50 characters")
     @Pattern(regexp = "^[a-zA-Z0-9_/-]+$", message = "Branch name can only contain letters, numbers, underscores, hyphens and slashes")
     private String defaultBranch = "main";
+
+    /**
+     * Whether release mode is enabled for this repository.
+     * Default: false
+     */
+    private Boolean releaseEnabled = false;
 }

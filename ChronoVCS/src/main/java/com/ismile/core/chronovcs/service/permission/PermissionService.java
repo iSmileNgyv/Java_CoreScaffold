@@ -87,6 +87,13 @@ public class PermissionService {
         }
     }
 
+    public void assertCanManageRepo(AuthenticatedUser authUser, String repoKey) {
+        RepoPermissionEntity perm = resolvePermissionOrThrow(authUser, repoKey);
+        if (!perm.isCanManageRepo()) {
+            throw new PermissionDeniedException("Manage access denied for repository: " + repoKey);
+        }
+    }
+
     // İstəsən əlavə:
     // assertCanCreateBranch, assertCanDeleteBranch, assertCanBypassTaskPolicy və s.
 }

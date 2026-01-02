@@ -18,18 +18,18 @@ import java.util.Optional;
 
 @Component
 @Command(
-        name = "pull",
-        description = "Fetch and integrate changes from remote repository"
+        name = "revert",
+        description = "Revert working tree to a previous release snapshot"
 )
 @RequiredArgsConstructor
 @Slf4j
-public class PullCommand implements Runnable {
+public class RevertCommand implements Runnable {
 
     private final PullService pullService;
     private final CredentialsService credentialsService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Option(names = {"--release"}, description = "Release version to pull (use 'latest')")
+    @Option(names = {"--release"}, required = true, description = "Release version to revert to (use 'latest')")
     private String releaseVersion;
 
     @Override
@@ -37,7 +37,6 @@ public class PullCommand implements Runnable {
         try {
             File projectRoot = new File(".").getAbsoluteFile();
 
-            // 1. Check if .vcs exists
             File vcsDir = new File(projectRoot, ".vcs");
             if (!vcsDir.exists()) {
                 System.out.println("Error: Not a ChronoVCS repository");
@@ -45,7 +44,6 @@ public class PullCommand implements Runnable {
                 return;
             }
 
-            // 2. Load remote config
             File remoteFile = new File(projectRoot, ".vcs/remote.json");
             if (!remoteFile.exists()) {
                 System.out.println("Error: No remote configured");
@@ -56,7 +54,6 @@ public class PullCommand implements Runnable {
             String remoteJson = Files.readString(remoteFile.toPath());
             RemoteConfig remoteConfig = objectMapper.readValue(remoteJson, RemoteConfig.class);
 
-            // 3. Load credentials
             Optional<CredentialsEntry> credsOpt = credentialsService.findForServer(remoteConfig.getBaseUrl());
             if (credsOpt.isEmpty()) {
                 System.out.println("Error: No credentials found for " + remoteConfig.getBaseUrl());
@@ -66,38 +63,21 @@ public class PullCommand implements Runnable {
 
             CredentialsEntry credentials = credsOpt.get();
 
-            // 4. Execute pull
-            System.out.println("Pulling from " + remoteConfig.getBaseUrl() + "/" + remoteConfig.getRepoKey() + "...");
+            System.out.println("Reverting to release " + releaseVersion + "...");
 
-            PullResult result = releaseVersion != null
-                    ? pullService.pullRelease(projectRoot, remoteConfig, credentials, releaseVersion)
-                    : pullService.pull(projectRoot, remoteConfig, credentials);
+            PullResult result = pullService.revertRelease(projectRoot, remoteConfig, credentials, releaseVersion);
 
-            // 5. Display result
             if (result.isSuccess()) {
                 System.out.println(result.getMessage());
-                if (result.getCommitsDownloaded() > 0) {
-                    System.out.println("Downloaded " + result.getCommitsDownloaded() + " new commit(s)");
-                }
-
-                // Display changed files as IDE-clickable links
-                if (result.getChangedFiles() != null && !result.getChangedFiles().isEmpty()) {
-                    System.out.println("\nChanged files:");
-                    for (String file : result.getChangedFiles()) {
-                        // Format: file:1 (IDE-clickable)
-                        System.out.println("  " + file + ":1");
-                    }
-                }
-
-                System.out.println("\nPull successful!");
+                System.out.println("Revert successful!");
             } else {
-                System.out.println("Pull failed:");
+                System.out.println("Revert failed:");
                 System.out.println(result.getMessage());
             }
 
         } catch (Exception e) {
-            log.error("Pull command failed", e);
-            System.out.println("Error: Pull failed - " + e.getMessage());
+            log.error("Revert command failed", e);
+            System.out.println("Error: Revert failed - " + e.getMessage());
         }
     }
 }

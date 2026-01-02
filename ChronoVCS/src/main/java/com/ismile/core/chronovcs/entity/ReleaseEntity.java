@@ -33,6 +33,9 @@ public class ReleaseEntity {
     @Column(nullable = false, length = 50)
     private String version;
 
+    @Column(name = "snapshot_commit_id", length = 64)
+    private String snapshotCommitId;
+
     @Column(name = "version_type", length = 10)
     private String versionType; // MAJOR, MINOR, PATCH
 

@@ -36,6 +36,10 @@ public class RepositorySettingsEntity {
     @Builder.Default
     private Boolean enforceSemanticVersioning = true;
 
+    @Column(name = "release_enabled")
+    @Builder.Default
+    private Boolean releaseEnabled = false;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

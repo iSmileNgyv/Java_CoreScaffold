@@ -5,7 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ismile.core.chronovcs.dto.clone.BatchObjectsResponseDto;
 import com.ismile.core.chronovcs.dto.clone.CommitHistoryResponseDto;
 import com.ismile.core.chronovcs.dto.clone.RefsResponseDto;
+import com.ismile.core.chronovcs.dto.push.CommitFileEntryDto;
 import com.ismile.core.chronovcs.dto.push.CommitSnapshotDto;
+import com.ismile.core.chronovcs.dto.tree.TreeEntryDto;
+import com.ismile.core.chronovcs.dto.tree.TreeResponseDto;
 import com.ismile.core.chronovcs.entity.BlobEntity;
 import com.ismile.core.chronovcs.entity.BranchHeadEntity;
 import com.ismile.core.chronovcs.entity.CommitEntity;
@@ -62,7 +65,7 @@ public class CloneService {
         CommitEntity commit = commitRepository.findByRepositoryAndCommitId(repo, commitHash)
                 .orElseThrow(() -> new IllegalArgumentException("Commit not found: " + commitHash));
 
-        return mapToDto(commit);
+        return mapToDto(commit, repo.getRepoKey(), true);
     }
 
     @Transactional(readOnly = true)
@@ -104,7 +107,7 @@ public class CloneService {
             }
 
             CommitEntity commit = commitOpt.get();
-            commits.add(mapToDto(commit));
+            commits.add(mapToDto(commit, repo.getRepoKey(), false));
 
             currentCommitId = commit.getParentCommitId();
         }
@@ -145,7 +148,125 @@ public class CloneService {
                 .build();
     }
 
-    private CommitSnapshotDto mapToDto(CommitEntity entity) {
+    @Transactional(readOnly = true)
+    public TreeResponseDto getTree(String repoKey, String ref, String path) {
+        RepositoryEntity repo = repositoryRepository.findByRepoKey(repoKey)
+                .orElseThrow(() -> new IllegalArgumentException("Repository not found: " + repoKey));
+
+        String resolvedRef = (ref == null || ref.isBlank()) ? repo.getDefaultBranch() : ref;
+        String commitId = resolveCommitId(repo, resolvedRef);
+
+        if (commitId == null || commitId.isBlank()) {
+            return new TreeResponseDto(repoKey, resolvedRef, null, normalizePath(path), Collections.emptyList());
+        }
+
+        CommitEntity commit = commitRepository.findByRepositoryAndCommitId(repo, commitId)
+                .orElseThrow(() -> new IllegalArgumentException("Commit not found: " + commitId));
+
+        Map<String, String> files = parseFilesJson(commit);
+        List<TreeEntryDto> entries = buildTreeEntries(repoKey, files, normalizePath(path));
+
+        return new TreeResponseDto(repoKey, resolvedRef, commitId, normalizePath(path), entries);
+    }
+
+    private String resolveCommitId(RepositoryEntity repo, String ref) {
+        if (ref == null || ref.isBlank()) {
+            return null;
+        }
+
+        Optional<BranchHeadEntity> branchOpt = branchHeadRepository.findByRepositoryAndBranch(repo, ref);
+        if (branchOpt.isPresent()) {
+            return branchOpt.get().getHeadCommitId();
+        }
+
+        Optional<CommitEntity> commitOpt = commitRepository.findByRepositoryAndCommitId(repo, ref);
+        if (commitOpt.isPresent()) {
+            return ref;
+        }
+
+        throw new IllegalArgumentException("Ref not found: " + ref);
+    }
+
+    private List<TreeEntryDto> buildTreeEntries(String repoKey,
+                                                 Map<String, String> files,
+                                                 String normalizedPath) {
+        if (files == null || files.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        String prefix = normalizedPath.isEmpty() ? "" : normalizedPath + "/";
+        Map<String, TreeEntryDto> entries = new HashMap<>();
+        TreeEntryDto exactFile = null;
+
+        for (Map.Entry<String, String> entry : files.entrySet()) {
+            String fullPath = entry.getKey();
+            String hash = entry.getValue();
+
+            if (!normalizedPath.isEmpty() && fullPath.equals(normalizedPath)) {
+                exactFile = new TreeEntryDto(
+                        normalizedPath.substring(normalizedPath.lastIndexOf('/') + 1),
+                        normalizedPath,
+                        "FILE",
+                        hash,
+                        "/api/repositories/" + repoKey + "/blobs/" + hash
+                );
+                continue;
+            }
+
+            if (!prefix.isEmpty() && !fullPath.startsWith(prefix)) {
+                continue;
+            }
+
+            String rest = prefix.isEmpty() ? fullPath : fullPath.substring(prefix.length());
+            if (rest.isEmpty()) {
+                continue;
+            }
+
+            int slashIndex = rest.indexOf('/');
+            if (slashIndex >= 0) {
+                String dirName = rest.substring(0, slashIndex);
+                String dirPath = normalizedPath.isEmpty() ? dirName : normalizedPath + "/" + dirName;
+                entries.putIfAbsent(dirPath, new TreeEntryDto(dirName, dirPath, "DIR", null, null));
+            } else {
+                String fileName = rest;
+                String filePath = normalizedPath.isEmpty() ? fileName : normalizedPath + "/" + fileName;
+                String url = "/api/repositories/" + repoKey + "/blobs/" + hash;
+                entries.putIfAbsent(filePath, new TreeEntryDto(fileName, filePath, "FILE", hash, url));
+            }
+        }
+
+        if (exactFile != null && entries.isEmpty()) {
+            return List.of(exactFile);
+        }
+
+        List<TreeEntryDto> result = new ArrayList<>(entries.values());
+        result.sort((a, b) -> {
+            if (!a.getType().equals(b.getType())) {
+                return a.getType().equals("DIR") ? -1 : 1;
+            }
+            return a.getName().compareToIgnoreCase(b.getName());
+        });
+        return result;
+    }
+
+    private String normalizePath(String path) {
+        if (path == null) {
+            return "";
+        }
+        String normalized = path.trim();
+        if (normalized.equals("/")) {
+            return "";
+        }
+        while (normalized.startsWith("/")) {
+            normalized = normalized.substring(1);
+        }
+        while (normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized;
+    }
+
+    private Map<String, String> parseFilesJson(CommitEntity entity) {
         Map<String, String> files;
         try {
             files = objectMapper.readValue(entity.getFilesJson(), new TypeReference<Map<String, String>>() {});
@@ -153,6 +274,11 @@ public class CloneService {
             log.error("Failed to parse files JSON for commit: {}", entity.getCommitId(), e);
             files = Collections.emptyMap();
         }
+        return files;
+    }
+
+    private CommitSnapshotDto mapToDto(CommitEntity entity, String repoKey, boolean includeFileEntries) {
+        Map<String, String> files = parseFilesJson(entity);
 
         CommitSnapshotDto dto = new CommitSnapshotDto();
         dto.setId(entity.getCommitId());
@@ -161,6 +287,17 @@ public class CloneService {
         dto.setMessage(entity.getMessage());
         dto.setTimestamp(entity.getTimestamp());
         dto.setFiles(files);
+        if (includeFileEntries && !files.isEmpty()) {
+            List<CommitFileEntryDto> entries = new ArrayList<>();
+            List<String> paths = new ArrayList<>(files.keySet());
+            Collections.sort(paths);
+            for (String path : paths) {
+                String hash = files.get(path);
+                String url = "/api/repositories/" + repoKey + "/blobs/" + hash;
+                entries.add(new CommitFileEntryDto(path, hash, url));
+            }
+            dto.setFileEntries(entries);
+        }
 
         return dto;
     }

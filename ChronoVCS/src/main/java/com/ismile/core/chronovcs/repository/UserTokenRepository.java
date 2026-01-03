@@ -10,4 +10,5 @@ import java.util.List;
 public interface UserTokenRepository extends JpaRepository<UserTokenEntity, Long> {
     // Finds all tokens matching a prefix that are not revoked
     List<UserTokenEntity> findByTokenPrefixAndRevokedFalse(String tokenPrefix);
+    List<UserTokenEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 }

@@ -46,6 +46,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }
 
+    @ExceptionHandler(TokenPermissionRequiredException.class)
+    public ResponseEntity<ApiErrorResponse> handleTokenPermissionRequired(
+            TokenPermissionRequiredException ex,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse body = buildError(
+                HttpStatus.UNAUTHORIZED,
+                "TOKEN_PERMISSION_REQUIRED",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
+    }
+
     @ExceptionHandler(RepositoryNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleRepoNotFound(
             RepositoryNotFoundException ex,

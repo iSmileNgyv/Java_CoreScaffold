@@ -10,4 +10,6 @@ import java.util.List;
 public interface ReleaseTaskRepository extends JpaRepository<ReleaseTaskEntity, Long> {
 
     List<ReleaseTaskEntity> findByReleaseId(Long releaseId);
+
+    void deleteByReleaseId(Long releaseId);
 }

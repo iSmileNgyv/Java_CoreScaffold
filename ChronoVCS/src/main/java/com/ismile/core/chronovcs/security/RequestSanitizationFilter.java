@@ -112,24 +112,39 @@ public class RequestSanitizationFilter implements Filter {
             return;
         }
 
-        // Check query parameters
+        // Check query parameter values (avoid false positives on "&" separators)
         if (queryString != null) {
-            if (containsSqlInjection(queryString)) {
-                blockRequest(httpResponse, "SQL_INJECTION",
-                        "SQL injection detected in query parameters", uri);
-                return;
-            }
+            for (var entry : httpRequest.getParameterMap().entrySet()) {
+                String key = entry.getKey();
+                if (containsSqlInjection(key) || containsXss(key) || containsCommandInjection(key)) {
+                    blockRequest(httpResponse, "MALICIOUS_PARAM",
+                            "Malicious pattern detected in query parameter name", uri);
+                    return;
+                }
 
-            if (containsXss(queryString)) {
-                blockRequest(httpResponse, "XSS_ATTACK",
-                        "XSS attack detected in query parameters", uri);
-                return;
-            }
+                String[] values = entry.getValue();
+                if (values == null) {
+                    continue;
+                }
+                for (String value : values) {
+                    if (containsSqlInjection(value)) {
+                        blockRequest(httpResponse, "SQL_INJECTION",
+                                "SQL injection detected in query parameters", uri);
+                        return;
+                    }
 
-            if (containsCommandInjection(queryString)) {
-                blockRequest(httpResponse, "COMMAND_INJECTION",
-                        "Command injection detected", uri);
-                return;
+                    if (containsXss(value)) {
+                        blockRequest(httpResponse, "XSS_ATTACK",
+                                "XSS attack detected in query parameters", uri);
+                        return;
+                    }
+
+                    if (containsCommandInjection(value)) {
+                        blockRequest(httpResponse, "COMMAND_INJECTION",
+                                "Command injection detected", uri);
+                        return;
+                    }
+                }
             }
         }
 

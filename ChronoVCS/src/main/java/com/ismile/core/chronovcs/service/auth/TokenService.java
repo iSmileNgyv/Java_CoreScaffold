@@ -2,6 +2,7 @@ package com.ismile.core.chronovcs.service.auth;
 
 import com.ismile.core.chronovcs.dto.token.CreateTokenRequest;
 import com.ismile.core.chronovcs.dto.token.TokenResponse;
+import com.ismile.core.chronovcs.dto.token.TokenSummaryDto;
 import com.ismile.core.chronovcs.entity.UserEntity;
 import com.ismile.core.chronovcs.entity.UserTokenEntity;
 import com.ismile.core.chronovcs.repository.UserTokenRepository;
@@ -12,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -53,5 +56,36 @@ public class TokenService {
                 .expiresAt(entity.getExpiresAt())
                 .createdAt(entity.getCreatedAt())
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public List<TokenSummaryDto> listTokens(Long userId) {
+        List<UserTokenEntity> tokens = userTokenRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
+        List<TokenSummaryDto> result = new ArrayList<>();
+        for (UserTokenEntity token : tokens) {
+            result.add(new TokenSummaryDto(
+                    token.getId(),
+                    token.getTokenName(),
+                    token.getTokenPrefix(),
+                    token.getExpiresAt(),
+                    token.getCreatedAt(),
+                    token.getLastUsedAt(),
+                    token.isRevoked()
+            ));
+        }
+        return result;
+    }
+
+    @Transactional
+    public void revokeToken(Long userId, Long tokenId) {
+        UserTokenEntity token = userTokenRepository.findById(tokenId)
+                .orElseThrow(() -> new IllegalArgumentException("Token not found"));
+        if (!token.getUser().getId().equals(userId)) {
+            throw new IllegalArgumentException("Token not found");
+        }
+        if (!token.isRevoked()) {
+            token.setRevoked(true);
+            userTokenRepository.save(token);
+        }
     }
 }

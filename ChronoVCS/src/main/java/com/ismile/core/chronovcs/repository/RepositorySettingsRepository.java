@@ -10,4 +10,6 @@ import java.util.Optional;
 public interface RepositorySettingsRepository extends JpaRepository<RepositorySettingsEntity, Long> {
 
     Optional<RepositorySettingsEntity> findByRepositoryId(Long repositoryId);
+
+    void deleteByRepositoryId(Long repositoryId);
 }

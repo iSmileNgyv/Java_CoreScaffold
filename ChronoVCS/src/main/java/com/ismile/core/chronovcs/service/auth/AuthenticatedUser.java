@@ -14,6 +14,7 @@ public class AuthenticatedUser {
     private Long userId;
     private String userUid;
     private String email;
+    private Long tokenId;
 
     public static AuthenticatedUser fromEntity(UserEntity user) {
         return AuthenticatedUser.builder()

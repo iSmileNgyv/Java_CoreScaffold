@@ -63,6 +63,7 @@ public class PatAuthenticationProvider implements AuthenticationProvider {
         // --- DÜZƏLİŞ BURADADIR ---
         // UserEntity-ni AuthenticatedUser DTO-ya çeviririk
         AuthenticatedUser authUser = AuthenticatedUser.fromEntity(user);
+        authUser.setTokenId(matchedToken.getId());
 
         return new UsernamePasswordAuthenticationToken(
                 new ChronoUserPrincipal(authUser), // İndi düzgün tipi qəbul edir

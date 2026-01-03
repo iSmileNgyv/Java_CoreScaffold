@@ -32,4 +32,6 @@ public interface CommitRepository extends JpaRepository<CommitEntity, Long> {
      * Count commits in a specific branch.
      */
     long countByRepositoryAndBranch(RepositoryEntity repository, String branch);
+
+    void deleteAllByRepository(RepositoryEntity repository);
 }

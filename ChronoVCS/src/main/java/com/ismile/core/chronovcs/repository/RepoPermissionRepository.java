@@ -14,4 +14,7 @@ public interface RepoPermissionRepository extends JpaRepository<RepoPermissionEn
             RepositoryEntity repository
     );
     List<RepoPermissionEntity> findAllByUserSettings(UserEntity user);
+    List<RepoPermissionEntity> findAllByRepository(RepositoryEntity repository);
+
+    void deleteAllByRepository(RepositoryEntity repository);
 }

@@ -9,4 +9,6 @@ import java.util.Optional;
 public interface BlobRepository extends JpaRepository<BlobEntity, Long> {
 
     Optional<BlobEntity> findByRepositoryAndHash(RepositoryEntity repository, String hash);
+
+    void deleteAllByRepository(RepositoryEntity repository);
 }

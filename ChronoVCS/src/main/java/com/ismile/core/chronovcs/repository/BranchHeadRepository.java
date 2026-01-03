@@ -12,4 +12,6 @@ public interface BranchHeadRepository extends JpaRepository<BranchHeadEntity, Lo
     Optional<BranchHeadEntity> findByRepositoryAndBranch(RepositoryEntity repository, String branch);
 
     List<BranchHeadEntity> findAllByRepository(RepositoryEntity repository);
+
+    void deleteAllByRepository(RepositoryEntity repository);
 }

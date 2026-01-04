@@ -193,7 +193,7 @@ public class CommitGraphService {
         String mergeBase = findCommonAncestor(repository, targetCommitId, sourceCommitId);
 
         if (mergeBase == null) {
-            throw new BranchOperationException("Cannot merge: no common ancestor found");
+            log.warn("No common ancestor found. Proceeding with unrelated history merge.");
         }
 
         // Calculate distance
@@ -203,16 +203,20 @@ public class CommitGraphService {
         boolean canFastForward = canFastForward(repository, targetCommitId, sourceCommitId);
 
         // Get commits
-        CommitEntity baseCommit = commitRepository.findByRepositoryAndCommitId(repository, mergeBase).orElse(null);
+        CommitEntity baseCommit = mergeBase != null
+                ? commitRepository.findByRepositoryAndCommitId(repository, mergeBase).orElse(null)
+                : null;
         CommitEntity targetCommit = commitRepository.findByRepositoryAndCommitId(repository, targetCommitId).orElse(null);
         CommitEntity sourceCommit = commitRepository.findByRepositoryAndCommitId(repository, sourceCommitId).orElse(null);
 
-        if (baseCommit == null || targetCommit == null || sourceCommit == null) {
+        if ((mergeBase != null && baseCommit == null) || targetCommit == null || sourceCommit == null) {
             throw new BranchOperationException("Cannot analyze merge: commits not found");
         }
 
         // Parse file snapshots
-        Map<String, String> baseFiles = parseFilesJson(baseCommit.getFilesJson());
+        Map<String, String> baseFiles = baseCommit != null
+                ? parseFilesJson(baseCommit.getFilesJson())
+                : new HashMap<>();
         Map<String, String> targetFiles = parseFilesJson(targetCommit.getFilesJson());
         Map<String, String> sourceFiles = parseFilesJson(sourceCommit.getFilesJson());
 

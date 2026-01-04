@@ -8,7 +8,6 @@ import com.ismile.core.chronovcs.service.permission.PermissionService;
 import com.ismile.core.chronovcs.service.repository.RepositoryService;
 import com.ismile.core.chronovcs.service.repository.RepositorySettingsService;
 import com.ismile.core.chronovcs.exception.PermissionDeniedException;
-import com.ismile.core.chronovcs.repository.BranchHeadRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,7 +20,6 @@ public class PushService {
     private final PermissionService permissionService;
     private final VersioningPushStrategyRegistry strategyRegistry;
     private final RepositorySettingsService repositorySettingsService;
-    private final BranchHeadRepository branchHeadRepository;
 
     @Transactional
     public PushResultDto push(
@@ -40,14 +38,9 @@ public class PushService {
         if (Boolean.TRUE.equals(settings.getReleaseEnabled())
                 && request.getBranch() != null
                 && request.getBranch().equals(repo.getDefaultBranch())) {
-            String headCommitId = branchHeadRepository.findByRepositoryAndBranch(repo, repo.getDefaultBranch())
-                    .map(branch -> branch.getHeadCommitId())
-                    .orElse(null);
-            if (headCommitId != null && !headCommitId.isBlank()) {
-                throw new PermissionDeniedException(
-                        "Default branch is protected while release mode is enabled"
-                );
-            }
+            throw new PermissionDeniedException(
+                    "Default branch is protected while release mode is enabled"
+            );
         }
 
         // 3) Resolve strategy by versioning_mode

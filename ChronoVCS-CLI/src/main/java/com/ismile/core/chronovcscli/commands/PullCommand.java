@@ -3,6 +3,8 @@ package com.ismile.core.chronovcscli.commands;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ismile.core.chronovcscli.auth.CredentialsEntry;
 import com.ismile.core.chronovcscli.auth.CredentialsService;
+import com.ismile.core.chronovcscli.core.checkout.CheckoutService;
+import com.ismile.core.chronovcscli.core.pull.LocalCommitReader;
 import com.ismile.core.chronovcscli.core.pull.PullResult;
 import com.ismile.core.chronovcscli.core.pull.PullService;
 import com.ismile.core.chronovcscli.remote.RemoteConfig;
@@ -27,10 +29,15 @@ public class PullCommand implements Runnable {
 
     private final PullService pullService;
     private final CredentialsService credentialsService;
+    private final LocalCommitReader localCommitReader;
+    private final CheckoutService checkoutService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Option(names = {"--release"}, description = "Release version to pull (use 'latest')")
     private String releaseVersion;
+
+    @Option(names = {"--branch"}, description = "Branch to pull (switches temporarily if needed)")
+    private String pullBranch;
 
     @Override
     public void run() {
@@ -69,6 +76,26 @@ public class PullCommand implements Runnable {
             // 4. Execute pull
             System.out.println("Pulling from " + remoteConfig.getBaseUrl() + "/" + remoteConfig.getRepoKey() + "...");
 
+            if (releaseVersion != null && pullBranch != null) {
+                System.out.println("Error: --release and --branch cannot be used together");
+                return;
+            }
+
+            String originalBranch = localCommitReader.getCurrentBranch(projectRoot);
+            boolean switched = false;
+
+            if (pullBranch != null && !pullBranch.isBlank() && !pullBranch.equals(originalBranch)) {
+                File branchFile = new File(projectRoot, ".vcs/refs/heads/" + pullBranch);
+                if (!branchFile.exists()) {
+                    System.out.println("Error: Branch '" + pullBranch + "' not found locally");
+                    System.out.println("Hint: Run 'chronovcs fetch' then 'chronovcs checkout " + pullBranch + "' to create it.");
+                    return;
+                }
+
+                checkoutService.checkoutBranch(projectRoot, pullBranch);
+                switched = true;
+            }
+
             PullResult result = releaseVersion != null
                     ? pullService.pullRelease(projectRoot, remoteConfig, credentials, releaseVersion)
                     : pullService.pull(projectRoot, remoteConfig, credentials);
@@ -90,9 +117,18 @@ public class PullCommand implements Runnable {
                 }
 
                 System.out.println("\nPull successful!");
+
+                if (switched) {
+                    checkoutService.checkoutBranch(projectRoot, originalBranch);
+                    System.out.println("Returned to branch '" + originalBranch + "'");
+                }
             } else {
                 System.out.println("Pull failed:");
                 System.out.println(result.getMessage());
+
+                if (switched) {
+                    System.out.println("Staying on branch '" + pullBranch + "' due to pull failure");
+                }
             }
 
         } catch (Exception e) {

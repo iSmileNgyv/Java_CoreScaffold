@@ -56,9 +56,7 @@ public class PullService {
                     : "main";
 
             if (releaseEnabled && currentBranch != null && currentBranch.equals(defaultBranch)) {
-                return PullResult.error(
-                        "Default branch is protected while release mode is enabled. Use --release."
-                );
+                log.info("Release mode enabled; pulling default branch '{}' for sync", defaultBranch);
             }
 
             // 2. Fetch remote refs
@@ -452,7 +450,7 @@ public class PullService {
         }
 
         // 2. Now perform the merge
-        MergeResult mergeResult = mergeEngine.merge(projectRoot, localHead, remoteHead, branch);
+        MergeResult mergeResult = mergeEngine.merge(projectRoot, localHead, remoteHead, branch, branch);
 
         // 3. Convert MergeResult to PullResult
         if (mergeResult.isSuccess()) {

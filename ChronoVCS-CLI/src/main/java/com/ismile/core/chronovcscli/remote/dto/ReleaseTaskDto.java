@@ -5,7 +5,8 @@ import lombok.Data;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class RepositoryInfoResponseDto {
-    private String defaultBranch;
-    private boolean releaseEnabled;
+public class ReleaseTaskDto {
+    private String jiraIssueKey;
+    private String jiraIssueType;
+    private String versionType;
 }

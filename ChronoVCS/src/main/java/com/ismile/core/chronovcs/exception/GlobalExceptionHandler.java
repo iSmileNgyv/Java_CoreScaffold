@@ -74,6 +74,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
     }
 
+    @ExceptionHandler(PullRequestNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handlePullRequestNotFound(
+            PullRequestNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse body = buildError(
+                HttpStatus.NOT_FOUND,
+                "PULL_REQUEST_NOT_FOUND",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGeneric(
             Exception ex,

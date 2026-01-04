@@ -403,8 +403,9 @@ public class BranchService {
                 .orElseThrow(() -> new BranchOperationException("Source commit not found"));
         CommitEntity targetCommit = commitRepository.findByRepositoryAndCommitId(repository, targetCommitId)
                 .orElseThrow(() -> new BranchOperationException("Target commit not found"));
-        CommitEntity baseCommit = commitRepository.findByRepositoryAndCommitId(repository, analysis.getMergeBase())
-                .orElse(null);
+        CommitEntity baseCommit = analysis.getMergeBase() != null
+                ? commitRepository.findByRepositoryAndCommitId(repository, analysis.getMergeBase()).orElse(null)
+                : null;
 
         // Create merged snapshot
         Map<String, String> mergedFiles;

@@ -30,7 +30,11 @@ public class MergeEngineImpl implements MergeEngine {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public MergeResult merge(File projectRoot, String localCommitId, String remoteCommitId, String branch) {
+    public MergeResult merge(File projectRoot,
+                             String localCommitId,
+                             String remoteCommitId,
+                             String targetBranch,
+                             String mergeLabel) {
         try {
             log.info("Starting merge: local={}, remote={}", localCommitId, remoteCommitId);
 
@@ -42,13 +46,13 @@ public class MergeEngineImpl implements MergeEngine {
             // 2. Find common ancestor
             String baseCommitId = ancestorFinder.findCommonAncestor(projectRoot, localCommitId, remoteCommitId);
             if (baseCommitId == null) {
-                return MergeResult.error("No common ancestor found - cannot merge");
+                log.warn("No common ancestor found. Proceeding with unrelated history merge.");
+            } else {
+                log.info("Common ancestor: {}", baseCommitId);
             }
 
-            log.info("Common ancestor: {}", baseCommitId);
-
             // 3. Check if fast-forward possible
-            if (baseCommitId.equals(localCommitId)) {
+            if (baseCommitId != null && baseCommitId.equals(localCommitId)) {
                 return MergeResult.builder()
                         .success(true)
                         .strategy(MergeStrategy.FAST_FORWARD)
@@ -60,16 +64,21 @@ public class MergeEngineImpl implements MergeEngine {
             }
 
             // 4. Load commits
-            CommitModel baseCommit = loadCommit(projectRoot, baseCommitId);
+            CommitModel baseCommit = baseCommitId != null ? loadCommit(projectRoot, baseCommitId) : null;
             CommitModel localCommit = loadCommit(projectRoot, localCommitId);
             CommitModel remoteCommit = loadCommit(projectRoot, remoteCommitId);
 
-            if (baseCommit == null || localCommit == null || remoteCommit == null) {
-                return MergeResult.error("Failed to load commits");
+            if ((baseCommitId != null && baseCommit == null) || localCommit == null || remoteCommit == null) {
+                String error = String.format("Failed to load commits. Base(%s): %s, Local(%s): %s, Remote(%s): %s",
+                        baseCommitId, (baseCommit != null ? "OK" : "MISSING"),
+                        localCommitId, (localCommit != null ? "OK" : "MISSING"),
+                        remoteCommitId, (remoteCommit != null ? "OK" : "MISSING"));
+                log.error(error);
+                return MergeResult.error(error);
             }
 
             // 5. Perform three-way merge
-            return performThreeWayMerge(projectRoot, branch,
+            return performThreeWayMerge(projectRoot, targetBranch, mergeLabel,
                     baseCommit, localCommit, remoteCommit);
 
         } catch (Exception e) {
@@ -78,12 +87,15 @@ public class MergeEngineImpl implements MergeEngine {
         }
     }
 
-    private MergeResult performThreeWayMerge(File projectRoot, String branch,
+    private MergeResult performThreeWayMerge(File projectRoot,
+                                             String targetBranch,
+                                             String mergeLabel,
                                               CommitModel baseCommit,
                                               CommitModel localCommit,
                                               CommitModel remoteCommit) throws Exception {
+        String label = (mergeLabel == null || mergeLabel.isBlank()) ? targetBranch : mergeLabel;
 
-        Map<String, String> baseFiles = baseCommit.getFiles() != null ? baseCommit.getFiles() : new HashMap<>();
+        Map<String, String> baseFiles = (baseCommit != null && baseCommit.getFiles() != null) ? baseCommit.getFiles() : new HashMap<>();
         Map<String, String> localFiles = localCommit.getFiles() != null ? localCommit.getFiles() : new HashMap<>();
         Map<String, String> remoteFiles = remoteCommit.getFiles() != null ? remoteCommit.getFiles() : new HashMap<>();
 
@@ -154,7 +166,7 @@ public class MergeEngineImpl implements MergeEngine {
             if (attempt.hasConflict) {
                 // Create conflict markers in working directory
                 File targetFile = new File(projectRoot, filePath);
-                conflictMarker.writeConflictFile(targetFile, localContent, remoteContent, "remote/" + branch);
+                conflictMarker.writeConflictFile(targetFile, localContent, remoteContent, "remote/" + label);
 
                 conflicts.add(ConflictInfo.builder()
                         .filePath(filePath)
@@ -184,9 +196,9 @@ public class MergeEngineImpl implements MergeEngine {
             saveMergeState(projectRoot, MergeState.builder()
                     .localCommitId(localCommit.getId())
                     .remoteCommitId(remoteCommit.getId())
-                    .baseCommitId(baseCommit.getId())
-                    .branch(branch)
-                    .mergeMessage("Merge remote-tracking branch '" + branch + "'")
+                    .baseCommitId(baseCommit != null ? baseCommit.getId() : null)
+                    .branch(targetBranch)
+                    .mergeMessage("Merge remote-tracking branch '" + label + "'")
                     .conflictedFiles(conflicts.stream()
                             .map(ConflictInfo::getFilePath)
                             .toList())
@@ -196,7 +208,7 @@ public class MergeEngineImpl implements MergeEngine {
             return MergeResult.builder()
                     .success(false)
                     .strategy(MergeStrategy.CONFLICT)
-                    .baseCommitId(baseCommit.getId())
+                    .baseCommitId(baseCommit != null ? baseCommit.getId() : null)
                     .localCommitId(localCommit.getId())
                     .remoteCommitId(remoteCommit.getId())
                     .conflicts(conflicts)
@@ -207,15 +219,15 @@ public class MergeEngineImpl implements MergeEngine {
         }
 
         // No conflicts - create merge commit
-        String mergeCommitId = createMergeCommit(projectRoot, branch,
+        String mergeCommitId = createMergeCommit(projectRoot, targetBranch,
                 localCommit.getId(), remoteCommit.getId(),
-                "Merge remote-tracking branch '" + branch + "'",
+                "Merge remote-tracking branch '" + label + "'",
                 mergedFiles);
 
         return MergeResult.builder()
                 .success(true)
                 .strategy(MergeStrategy.THREE_WAY)
-                .baseCommitId(baseCommit.getId())
+                .baseCommitId(baseCommit != null ? baseCommit.getId() : null)
                 .localCommitId(localCommit.getId())
                 .remoteCommitId(remoteCommit.getId())
                 .mergeCommitId(mergeCommitId)
@@ -358,6 +370,9 @@ public class MergeEngineImpl implements MergeEngine {
     private CommitModel loadCommit(File projectRoot, String commitId) {
         try {
             File commitFile = new File(projectRoot, ".vcs/commits/" + commitId);
+            if (!commitFile.exists()) {
+                commitFile = new File(projectRoot, ".vcs/commits/" + commitId + ".json");
+            }
             if (!commitFile.exists()) {
                 return null;
             }

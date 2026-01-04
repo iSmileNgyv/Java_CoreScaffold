@@ -37,13 +37,14 @@ public class RemotePushService {
             String basicToken = buildBasicAuth(creds);
 
             String bodyJson = objectMapper.writeValueAsString(requestDto);
+            byte[] bodyBytes = bodyJson.getBytes(StandardCharsets.UTF_8);
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .header("Authorization", "Basic " + basicToken)
                     .header("Accept", "application/json")
                     .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(bodyJson))
+                    .POST(HttpRequest.BodyPublishers.ofByteArray(bodyBytes))
                     .build();
 
             HttpResponse<String> response =

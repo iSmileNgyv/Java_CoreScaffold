@@ -27,6 +27,32 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DiffService {
 
+    private enum DiffOpType {
+        EQUAL,
+        INSERT,
+        DELETE
+    }
+
+    private static class LineInfo {
+        private final String original;
+        private final String key;
+
+        private LineInfo(String original, String key) {
+            this.original = original;
+            this.key = key;
+        }
+    }
+
+    private static class DiffOp {
+        private final DiffOpType type;
+        private final String line;
+
+        private DiffOp(DiffOpType type, String line) {
+            this.type = type;
+            this.line = line;
+        }
+    }
+
     private final CommitRepository commitRepository;
     private final BranchHeadRepository branchHeadRepository;
     private final RepositoryService repositoryService;
@@ -37,7 +63,11 @@ public class DiffService {
      * Compare two references (commits, branches, or tags).
      */
     @Transactional(readOnly = true)
-    public DiffResponse compare(String repoKey, String base, String head, boolean includePatch) {
+    public DiffResponse compare(String repoKey,
+                                String base,
+                                String head,
+                                boolean includePatch,
+                                boolean ignoreWhitespace) {
         log.info("Comparing {} ... {} in repository {}", base, head, repoKey);
 
         RepositoryEntity repository = repositoryService.getByKeyOrThrow(repoKey);
@@ -61,7 +91,13 @@ public class DiffService {
         Map<String, String> headFiles = parseFilesJson(headCommit.getFilesJson());
 
         // Calculate diff
-        List<FileDiff> fileDiffs = calculateFileDiffs(repository, baseFiles, headFiles, includePatch);
+        List<FileDiff> fileDiffs = calculateFileDiffs(
+                repository,
+                baseFiles,
+                headFiles,
+                includePatch,
+                ignoreWhitespace
+        );
 
         // Calculate statistics
         DiffStats stats = calculateStats(fileDiffs);
@@ -84,7 +120,10 @@ public class DiffService {
      * Get diff for a single commit (compare with its parent).
      */
     @Transactional(readOnly = true)
-    public DiffResponse getCommitDiff(String repoKey, String commitId, boolean includePatch) {
+    public DiffResponse getCommitDiff(String repoKey,
+                                      String commitId,
+                                      boolean includePatch,
+                                      boolean ignoreWhitespace) {
         log.info("Getting diff for commit {} in repository {}", commitId, repoKey);
 
         RepositoryEntity repository = repositoryService.getByKeyOrThrow(repoKey);
@@ -99,7 +138,13 @@ public class DiffService {
             Map<String, String> emptyFiles = new HashMap<>();
             Map<String, String> commitFiles = parseFilesJson(commit.getFilesJson());
 
-            List<FileDiff> fileDiffs = calculateFileDiffs(repository, emptyFiles, commitFiles, includePatch);
+            List<FileDiff> fileDiffs = calculateFileDiffs(
+                    repository,
+                    emptyFiles,
+                    commitFiles,
+                    includePatch,
+                    ignoreWhitespace
+            );
             DiffStats stats = calculateStats(fileDiffs);
 
             return DiffResponse.builder()
@@ -114,7 +159,61 @@ public class DiffService {
         }
 
         // Compare with parent
-        return compare(repoKey, parentCommitId, commitId, includePatch);
+        return compare(repoKey, parentCommitId, commitId, includePatch, ignoreWhitespace);
+    }
+
+    /**
+     * Result of a three-way merge attempt
+     */
+    public static class MergeAttempt {
+        public final boolean hasConflict;
+        public final byte[] mergedContent;
+
+        public MergeAttempt(boolean hasConflict, byte[] mergedContent) {
+            this.hasConflict = hasConflict;
+            this.mergedContent = mergedContent;
+        }
+
+        public static MergeAttempt success(byte[] content) {
+            return new MergeAttempt(false, content);
+        }
+
+        public static MergeAttempt conflict() {
+            return new MergeAttempt(true, null);
+        }
+    }
+
+    /**
+     * Attempt to merge three versions of a file
+     *
+     * @param baseContent   content from common ancestor
+     * @param localContent  content from local (target) branch
+     * @param remoteContent content from remote (source) branch
+     * @return merge attempt result
+     */
+    public MergeAttempt merge(byte[] baseContent, byte[] localContent, byte[] remoteContent) {
+
+        // If local and remote are identical, no conflict
+        if (Arrays.equals(localContent, remoteContent)) {
+            log.debug("No changes between local and remote");
+            return MergeAttempt.success(localContent);
+        }
+
+        // If local unchanged, take remote
+        if (Arrays.equals(baseContent, localContent)) {
+            log.debug("Local unchanged, taking remote version");
+            return MergeAttempt.success(remoteContent);
+        }
+
+        // If remote unchanged, keep local
+        if (Arrays.equals(baseContent, remoteContent)) {
+            log.debug("Remote unchanged, keeping local version");
+            return MergeAttempt.success(localContent);
+        }
+
+        // Both changed differently - conflict
+        log.debug("Both local and remote changed - conflict detected");
+        return MergeAttempt.conflict();
     }
 
     /**
@@ -124,7 +223,8 @@ public class DiffService {
             RepositoryEntity repository,
             Map<String, String> baseFiles,
             Map<String, String> headFiles,
-            boolean includePatch) {
+            boolean includePatch,
+            boolean ignoreWhitespace) {
 
         List<FileDiff> diffs = new ArrayList<>();
 
@@ -170,9 +270,10 @@ public class DiffService {
             diffBuilder.changeType(changeType);
 
             // Load content and generate patch if requested
-            if (includePatch && changeType != ChangeType.DELETED && changeType != ChangeType.ADDED) {
+            // Load content and generate patch if requested
+            if (includePatch) {
                 try {
-                    String[] patchData = generatePatch(repository, baseHash, headHash);
+                    String[] patchData = generatePatch(repository, baseHash, headHash, path, ignoreWhitespace);
                     if (patchData != null) {
                         diffBuilder.patch(patchData[0]);
                         diffBuilder.linesAdded(Integer.parseInt(patchData[1]));
@@ -190,7 +291,7 @@ public class DiffService {
                 // For added files, count lines if text
                 try {
                     BlobEntity headBlob = blobStorageService.findByHash(repository, headHash).orElse(null);
-                    if (headBlob != null && isTextFile(headBlob.getContentType())) {
+                    if (headBlob != null && (isTextFile(headBlob.getContentType()) || isTextExtension(path))) {
                         byte[] content = blobStorageService.loadContent(headBlob);
                         int lineCount = countLines(new String(content, StandardCharsets.UTF_8));
                         diffBuilder.linesAdded(lineCount);
@@ -208,7 +309,7 @@ public class DiffService {
                 // For deleted files, count lines if text
                 try {
                     BlobEntity baseBlob = blobStorageService.findByHash(repository, baseHash).orElse(null);
-                    if (baseBlob != null && isTextFile(baseBlob.getContentType())) {
+                    if (baseBlob != null && (isTextFile(baseBlob.getContentType()) || isTextExtension(path))) {
                         byte[] content = blobStorageService.loadContent(baseBlob);
                         int lineCount = countLines(new String(content, StandardCharsets.UTF_8));
                         diffBuilder.linesAdded(0);
@@ -237,53 +338,63 @@ public class DiffService {
      * Generate unified diff patch between two blobs.
      * Returns [patch, linesAdded, linesDeleted] or null if binary.
      */
-    private String[] generatePatch(RepositoryEntity repository, String oldHash, String newHash) {
+    private String[] generatePatch(RepositoryEntity repository,
+                                   String oldHash,
+                                   String newHash,
+                                   String path,
+                                   boolean ignoreWhitespace) {
         try {
-            BlobEntity oldBlob = blobStorageService.findByHash(repository, oldHash).orElse(null);
-            BlobEntity newBlob = blobStorageService.findByHash(repository, newHash).orElse(null);
+            BlobEntity oldBlob = oldHash != null ? blobStorageService.findByHash(repository, oldHash).orElse(null) : null;
+            BlobEntity newBlob = newHash != null ? blobStorageService.findByHash(repository, newHash).orElse(null) : null;
 
-            if (oldBlob == null || newBlob == null) {
+            if (oldBlob == null && newBlob == null) {
                 return null;
             }
 
-            // Check if text files
-            if (!isTextFile(oldBlob.getContentType()) || !isTextFile(newBlob.getContentType())) {
+            // Check if text files (by content type AND extension)
+            boolean isText = true;
+            if (oldBlob != null) {
+                isText = isText && (isTextFile(oldBlob.getContentType()) || isTextExtension(path));
+            }
+            if (newBlob != null) {
+                isText = isText && (isTextFile(newBlob.getContentType()) || isTextExtension(path));
+            }
+
+            if (!isText) {
                 return null; // Binary
             }
 
-            byte[] oldContent = blobStorageService.loadContent(oldBlob);
-            byte[] newContent = blobStorageService.loadContent(newBlob);
+            byte[] oldContent = oldBlob != null ? blobStorageService.loadContent(oldBlob) : new byte[0];
+            byte[] newContent = newBlob != null ? blobStorageService.loadContent(newBlob) : new byte[0];
 
-            String oldText = new String(oldContent, StandardCharsets.UTF_8);
-            String newText = new String(newContent, StandardCharsets.UTF_8);
+            String oldText = normalizeLineEndings(new String(oldContent, StandardCharsets.UTF_8));
+            String newText = normalizeLineEndings(new String(newContent, StandardCharsets.UTF_8));
 
-            // Simple line-by-line diff
             String[] oldLines = oldText.split("\n", -1);
             String[] newLines = newText.split("\n", -1);
+
+            LineInfo[] oldInfos = toLineInfos(oldLines, ignoreWhitespace);
+            LineInfo[] newInfos = toLineInfos(newLines, ignoreWhitespace);
+
+            List<DiffOp> ops = diffLines(oldInfos, newInfos);
 
             StringBuilder patch = new StringBuilder();
             int linesAdded = 0;
             int linesDeleted = 0;
 
-            // Very basic diff (not Myers algorithm, just simple comparison)
-            int maxLen = Math.max(oldLines.length, newLines.length);
-            for (int i = 0; i < maxLen; i++) {
-                String oldLine = i < oldLines.length ? oldLines[i] : null;
-                String newLine = i < newLines.length ? newLines[i] : null;
-
-                if (oldLine == null) {
-                    patch.append("+").append(newLine).append("\n");
-                    linesAdded++;
-                } else if (newLine == null) {
-                    patch.append("-").append(oldLine).append("\n");
-                    linesDeleted++;
-                } else if (!oldLine.equals(newLine)) {
-                    patch.append("-").append(oldLine).append("\n");
-                    patch.append("+").append(newLine).append("\n");
-                    linesDeleted++;
-                    linesAdded++;
-                } else {
-                    patch.append(" ").append(oldLine).append("\n");
+            for (DiffOp op : ops) {
+                switch (op.type) {
+                    case INSERT:
+                        patch.append("+").append(op.line).append("\n");
+                        linesAdded++;
+                        break;
+                    case DELETE:
+                        patch.append("-").append(op.line).append("\n");
+                        linesDeleted++;
+                        break;
+                    case EQUAL:
+                        patch.append(" ").append(op.line).append("\n");
+                        break;
                 }
             }
 
@@ -384,6 +495,18 @@ public class DiffService {
                 contentType.contains("python");
     }
 
+    private boolean isTextExtension(String path) {
+        if (path == null) return false;
+        String lower = path.toLowerCase();
+        return lower.endsWith(".txt") || lower.endsWith(".md") || lower.endsWith(".java") ||
+                lower.endsWith(".kt") || lower.endsWith(".js") || lower.endsWith(".ts") ||
+                lower.endsWith(".tsx") || lower.endsWith(".jsx") || lower.endsWith(".css") ||
+                lower.endsWith(".scss") || lower.endsWith(".html") || lower.endsWith(".xml") ||
+                lower.endsWith(".json") || lower.endsWith(".yaml") || lower.endsWith(".yml") ||
+                lower.endsWith(".properties") || lower.endsWith(".gradle") || lower.endsWith(".sql") ||
+                lower.endsWith(".sh") || lower.endsWith(".bat") || lower.endsWith(".gitignore");
+    }
+
     /**
      * Count lines in text.
      */
@@ -392,5 +515,135 @@ public class DiffService {
             return 0;
         }
         return text.split("\n", -1).length;
+    }
+
+    private String normalizeLineEndings(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text.replace("\r\n", "\n").replace("\r", "\n");
+    }
+
+    private List<DiffOp> diffLines(LineInfo[] oldLines, LineInfo[] newLines) {
+        int n = oldLines.length;
+        int m = newLines.length;
+        int max = n + m;
+        int offset = max;
+
+        int[] v = new int[2 * max + 3];
+        Arrays.fill(v, -1);
+        v[offset + 1] = 0;
+
+        List<int[]> trace = new ArrayList<>();
+
+        for (int d = 0; d <= max; d++) {
+            int[] vSnapshot = v.clone();
+            for (int k = -d; k <= d; k += 2) {
+                int kIndex = offset + k;
+                int x;
+                if (k == -d || (k != d && v[kIndex - 1] < v[kIndex + 1])) {
+                    x = v[kIndex + 1];
+                } else {
+                    x = v[kIndex - 1] + 1;
+                }
+
+                int y = x - k;
+                while (x < n && y < m && Objects.equals(oldLines[x].key, newLines[y].key)) {
+                    x++;
+                    y++;
+                }
+
+                vSnapshot[kIndex] = x;
+
+                if (x >= n && y >= m) {
+                    trace.add(vSnapshot);
+                    return buildDiffFromTrace(trace, oldLines, newLines, offset);
+                }
+            }
+            trace.add(vSnapshot);
+            v = vSnapshot;
+        }
+
+        return Collections.emptyList();
+    }
+
+    private List<DiffOp> buildDiffFromTrace(List<int[]> trace,
+                                            LineInfo[] oldLines,
+                                            LineInfo[] newLines,
+                                            int offset) {
+        List<DiffOp> ops = new ArrayList<>();
+        int x = oldLines.length;
+        int y = newLines.length;
+
+        for (int d = trace.size() - 1; d >= 0; d--) {
+            int[] v = trace.get(d);
+            int k = x - y;
+            int kIndex = offset + k;
+            int prevK;
+
+            if (k == -d || (k != d && v[kIndex - 1] < v[kIndex + 1])) {
+                prevK = k + 1;
+            } else {
+                prevK = k - 1;
+            }
+
+            int prevX = v[offset + prevK];
+            int prevY = prevX - prevK;
+
+            while (x > prevX && y > prevY) {
+                ops.add(new DiffOp(DiffOpType.EQUAL, newLines[y - 1].original));
+                x--;
+                y--;
+            }
+
+            if (d == 0) {
+                break;
+            }
+
+            if (x == prevX) {
+                ops.add(new DiffOp(DiffOpType.INSERT, newLines[prevY].original));
+            } else {
+                ops.add(new DiffOp(DiffOpType.DELETE, oldLines[prevX].original));
+            }
+
+            x = prevX;
+            y = prevY;
+        }
+
+        Collections.reverse(ops);
+        return ops;
+    }
+
+    private LineInfo[] toLineInfos(String[] lines, boolean ignoreWhitespace) {
+        LineInfo[] infos = new LineInfo[lines.length];
+        for (int i = 0; i < lines.length; i++) {
+            String original = lines[i];
+            String key = normalizeLineForCompare(original, ignoreWhitespace);
+            infos[i] = new LineInfo(original, key);
+        }
+        return infos;
+    }
+
+    private String normalizeLineForCompare(String line, boolean ignoreWhitespace) {
+        if (line == null) {
+            return "";
+        }
+        String normalized = trimTrailingWhitespace(line);
+        if (ignoreWhitespace) {
+            normalized = normalized.replaceAll("\\s+", " ").trim();
+        }
+        return normalized;
+    }
+
+    private String trimTrailingWhitespace(String line) {
+        int end = line.length();
+        while (end > 0) {
+            char ch = line.charAt(end - 1);
+            if (ch != ' ' && ch != '\t') {
+                break;
+            }
+            end--;
+        }
+        return line.substring(0, end);
     }
 }

@@ -37,14 +37,16 @@ public class DiffController {
             @PathVariable @Pattern(regexp = "^[a-zA-Z0-9_-]+$", message = "Invalid repository key") String repoKey,
             @PathVariable String base,
             @PathVariable String head,
-            @RequestParam(required = false, defaultValue = "false") boolean patch
+            @RequestParam(required = false, defaultValue = "false") boolean patch,
+            @RequestParam(required = false, defaultValue = "false") boolean ignoreWhitespace
     ) {
-        log.info("Comparing {}...{} in repository {} (patch={})", base, head, repoKey, patch);
+        log.info("Comparing {}...{} in repository {} (patch={}, ignoreWhitespace={})",
+                base, head, repoKey, patch, ignoreWhitespace);
 
         // Check permissions
         permissionService.assertCanRead(user, repoKey);
 
-        DiffResponse response = diffService.compare(repoKey, base, head, patch);
+        DiffResponse response = diffService.compare(repoKey, base, head, patch, ignoreWhitespace);
         return ResponseEntity.ok(response);
     }
 
@@ -57,14 +59,16 @@ public class DiffController {
             @CurrentUser AuthenticatedUser user,
             @PathVariable @Pattern(regexp = "^[a-zA-Z0-9_-]+$", message = "Invalid repository key") String repoKey,
             @PathVariable String commitId,
-            @RequestParam(required = false, defaultValue = "false") boolean patch
+            @RequestParam(required = false, defaultValue = "false") boolean patch,
+            @RequestParam(required = false, defaultValue = "false") boolean ignoreWhitespace
     ) {
-        log.info("Getting diff for commit {} in repository {} (patch={})", commitId, repoKey, patch);
+        log.info("Getting diff for commit {} in repository {} (patch={}, ignoreWhitespace={})",
+                commitId, repoKey, patch, ignoreWhitespace);
 
         // Check permissions
         permissionService.assertCanRead(user, repoKey);
 
-        DiffResponse response = diffService.getCommitDiff(repoKey, commitId, patch);
+        DiffResponse response = diffService.getCommitDiff(repoKey, commitId, patch, ignoreWhitespace);
         return ResponseEntity.ok(response);
     }
 
@@ -78,14 +82,16 @@ public class DiffController {
             @PathVariable @Pattern(regexp = "^[a-zA-Z0-9_-]+$", message = "Invalid repository key") String repoKey,
             @RequestParam String base,
             @RequestParam String head,
-            @RequestParam(required = false, defaultValue = "false") boolean patch
+            @RequestParam(required = false, defaultValue = "false") boolean patch,
+            @RequestParam(required = false, defaultValue = "false") boolean ignoreWhitespace
     ) {
-        log.info("Comparing base={} head={} in repository {} (patch={})", base, head, repoKey, patch);
+        log.info("Comparing base={} head={} in repository {} (patch={}, ignoreWhitespace={})",
+                base, head, repoKey, patch, ignoreWhitespace);
 
         // Check permissions
         permissionService.assertCanRead(user, repoKey);
 
-        DiffResponse response = diffService.compare(repoKey, base, head, patch);
+        DiffResponse response = diffService.compare(repoKey, base, head, patch, ignoreWhitespace);
         return ResponseEntity.ok(response);
     }
 }

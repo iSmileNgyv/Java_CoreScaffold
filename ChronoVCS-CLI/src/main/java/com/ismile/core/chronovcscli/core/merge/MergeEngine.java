@@ -13,10 +13,15 @@ public interface MergeEngine {
      * @param projectRoot    project root directory
      * @param localCommitId  local commit hash (HEAD)
      * @param remoteCommitId remote commit hash
-     * @param branch         current branch name
+     * @param targetBranch   branch to update with the merge result
+     * @param mergeLabel     label for merge messages and conflict markers
      * @return merge result
      */
-    MergeResult merge(File projectRoot, String localCommitId, String remoteCommitId, String branch);
+    MergeResult merge(File projectRoot,
+                      String localCommitId,
+                      String remoteCommitId,
+                      String targetBranch,
+                      String mergeLabel);
 
     /**
      * Continue merge after conflicts are resolved

@@ -8,6 +8,7 @@ import com.ismile.core.chronovcs.repository.RepoPermissionRepository;
 import com.ismile.core.chronovcs.repository.RepositoryRepository;
 import com.ismile.core.chronovcs.repository.RepositorySettingsRepository;
 import com.ismile.core.chronovcs.repository.TokenPermissionRepository;
+import com.ismile.core.chronovcs.repository.PullRequestRepository;
 import com.ismile.core.chronovcs.repository.ReleaseRepository;
 import com.ismile.core.chronovcs.repository.ReleaseTaskRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class RepositoryDeleteService {
     private final TokenPermissionRepository tokenPermissionRepository;
     private final ReleaseRepository releaseRepository;
     private final ReleaseTaskRepository releaseTaskRepository;
+    private final PullRequestRepository pullRequestRepository;
 
     @Transactional
     public void deleteRepository(String repoKey) {
@@ -37,6 +39,7 @@ public class RepositoryDeleteService {
                 .forEach(release -> releaseTaskRepository.deleteByReleaseId(release.getId()));
         releaseRepository.deleteAll(releaseRepository.findByRepositoryIdOrderByCreatedAtDesc(repository.getId()));
 
+        pullRequestRepository.deleteAllByRepository(repository);
         tokenPermissionRepository.deleteAllByRepositoryId(repository.getId());
         repoPermissionRepository.deleteAllByRepository(repository);
         settingsRepository.deleteByRepositoryId(repository.getId());

@@ -26,6 +26,17 @@ public class CheckoutService {
      * Checkout branch - switch to branch
      */
     public void checkoutBranch(File projectRoot, String branchName) throws Exception {
+        checkoutBranchInternal(projectRoot, branchName, false);
+    }
+
+    /**
+     * Checkout branch and discard local changes.
+     */
+    public void checkoutBranchHard(File projectRoot, String branchName) throws Exception {
+        checkoutBranchInternal(projectRoot, branchName, true);
+    }
+
+    private void checkoutBranchInternal(File projectRoot, String branchName, boolean force) throws Exception {
         // Check if branch exists
         File branchFile = new File(projectRoot, ".vcs/refs/heads/" + branchName);
         if (!branchFile.exists()) {
@@ -49,7 +60,7 @@ public class CheckoutService {
         Files.writeString(headFile.toPath(), "ref: refs/heads/" + branchName);
 
         // Checkout commit files
-        checkoutCommitFiles(projectRoot, commit);
+        checkoutCommitFiles(projectRoot, commit, force);
 
         log.info("Switched to branch '{}' at commit {}", branchName, branchHead);
     }
@@ -69,7 +80,7 @@ public class CheckoutService {
         Files.writeString(headFile.toPath(), commitHash);
 
         // Checkout commit files
-        checkoutCommitFiles(projectRoot, commit);
+        checkoutCommitFiles(projectRoot, commit, false);
 
         log.info("HEAD is now at {} (detached)", commitHash);
     }
@@ -111,14 +122,16 @@ public class CheckoutService {
     /**
      * Checkout all files from commit
      */
-    private void checkoutCommitFiles(File projectRoot, CommitSnapshotDto commit) throws Exception {
+    private void checkoutCommitFiles(File projectRoot, CommitSnapshotDto commit, boolean force) throws Exception {
         if (commit.getFiles() == null || commit.getFiles().isEmpty()) {
             log.warn("Commit has no files");
             return;
         }
 
         // Check for uncommitted changes before clearing working directory
-        checkForUncommittedChanges(projectRoot);
+        if (!force) {
+            checkForUncommittedChanges(projectRoot);
+        }
 
         // Clear working directory (except .vcs)
         clearWorkingDirectory(projectRoot);

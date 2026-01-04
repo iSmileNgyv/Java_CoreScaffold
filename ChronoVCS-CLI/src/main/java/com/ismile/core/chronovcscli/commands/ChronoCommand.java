@@ -25,6 +25,7 @@ import picocli.CommandLine.Command;
                 CheckoutCommand.class,
                 FetchCommand.class,
                 MergeCommand.class,
+                ResetCommand.class,
                 LogCommand.class,
                 RevertCommand.class
         }

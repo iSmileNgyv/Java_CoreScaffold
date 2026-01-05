@@ -5,14 +5,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ismile.core.chronovcs.dto.branch.CommitDistance;
 import com.ismile.core.chronovcs.dto.branch.MergeAnalysisResponse;
 import com.ismile.core.chronovcs.dto.branch.MergeConflict;
+import com.ismile.core.chronovcs.entity.BlobEntity;
 import com.ismile.core.chronovcs.entity.CommitEntity;
 import com.ismile.core.chronovcs.entity.RepositoryEntity;
 import com.ismile.core.chronovcs.exception.BranchOperationException;
 import com.ismile.core.chronovcs.repository.CommitRepository;
+import com.ismile.core.chronovcs.service.diff.DiffService;
+import com.ismile.core.chronovcs.service.storage.BlobStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @Service
@@ -21,6 +25,8 @@ import java.util.*;
 public class CommitGraphService {
 
     private final CommitRepository commitRepository;
+    private final BlobStorageService blobStorageService;
+    private final DiffService diffService;
     private final ObjectMapper objectMapper;
 
     /**
@@ -221,7 +227,7 @@ public class CommitGraphService {
         Map<String, String> sourceFiles = parseFilesJson(sourceCommit.getFilesJson());
 
         // Detect conflicts
-        List<MergeConflict> conflicts = detectConflicts(baseFiles, targetFiles, sourceFiles);
+        List<MergeConflict> conflicts = detectConflicts(repository, baseFiles, targetFiles, sourceFiles);
 
         // Calculate file changes
         int filesChangedInTarget = countChangedFiles(baseFiles, targetFiles);
@@ -247,6 +253,7 @@ public class CommitGraphService {
      * Detect conflicts between three file snapshots (3-way merge).
      */
     private List<MergeConflict> detectConflicts(
+            RepositoryEntity repository,
             Map<String, String> baseFiles,
             Map<String, String> targetFiles,
             Map<String, String> sourceFiles) {
@@ -273,8 +280,11 @@ public class CommitGraphService {
                 if (!baseBlob.equals(targetBlob) && !baseBlob.equals(sourceBlob)) {
                     // Both branches modified the file
                     if (!targetBlob.equals(sourceBlob)) {
-                        conflictType = MergeConflict.ConflictType.MODIFIED_MODIFIED;
-                        description = "Both branches modified this file differently";
+                        boolean autoMerged = canAutoMergeText(repository, filePath, baseBlob, targetBlob, sourceBlob);
+                        if (!autoMerged) {
+                            conflictType = MergeConflict.ConflictType.MODIFIED_MODIFIED;
+                            description = "Both branches modified this file differently";
+                        }
                     }
                     // else: both modified to same content, no conflict
                 }
@@ -365,6 +375,62 @@ public class CommitGraphService {
         }
 
         return summary.toString();
+    }
+
+    private boolean canAutoMergeText(RepositoryEntity repository,
+                                     String filePath,
+                                     String baseBlob,
+                                     String targetBlob,
+                                     String sourceBlob) {
+        try {
+            BlobEntity baseEntity = blobStorageService.findByHash(repository, baseBlob).orElse(null);
+            BlobEntity targetEntity = blobStorageService.findByHash(repository, targetBlob).orElse(null);
+            BlobEntity sourceEntity = blobStorageService.findByHash(repository, sourceBlob).orElse(null);
+
+            if (baseEntity == null || targetEntity == null || sourceEntity == null) {
+                return false;
+            }
+
+            if (!isTextFile(baseEntity.getContentType(), filePath)
+                    || !isTextFile(targetEntity.getContentType(), filePath)
+                    || !isTextFile(sourceEntity.getContentType(), filePath)) {
+                return false;
+            }
+
+            String baseText = new String(blobStorageService.loadContent(baseEntity), StandardCharsets.UTF_8);
+            String targetText = new String(blobStorageService.loadContent(targetEntity), StandardCharsets.UTF_8);
+            String sourceText = new String(blobStorageService.loadContent(sourceEntity), StandardCharsets.UTF_8);
+
+            return diffService.canAutoMergeText(baseText, targetText, sourceText, false);
+        } catch (Exception e) {
+            log.warn("Failed content merge check for {}: {}", filePath, e.getMessage());
+            return false;
+        }
+    }
+
+    private boolean isTextFile(String contentType, String path) {
+        if (contentType != null) {
+            String lower = contentType.toLowerCase();
+            if (lower.startsWith("text/")
+                    || lower.contains("json")
+                    || lower.contains("xml")
+                    || lower.contains("javascript")
+                    || lower.contains("java")
+                    || lower.contains("python")) {
+                return true;
+            }
+        }
+        if (path == null) {
+            return false;
+        }
+        String lowerPath = path.toLowerCase();
+        return lowerPath.endsWith(".txt") || lowerPath.endsWith(".md") || lowerPath.endsWith(".java") ||
+                lowerPath.endsWith(".kt") || lowerPath.endsWith(".js") || lowerPath.endsWith(".ts") ||
+                lowerPath.endsWith(".tsx") || lowerPath.endsWith(".jsx") || lowerPath.endsWith(".css") ||
+                lowerPath.endsWith(".scss") || lowerPath.endsWith(".html") || lowerPath.endsWith(".xml") ||
+                lowerPath.endsWith(".json") || lowerPath.endsWith(".yaml") || lowerPath.endsWith(".yml") ||
+                lowerPath.endsWith(".properties") || lowerPath.endsWith(".gradle") || lowerPath.endsWith(".sql") ||
+                lowerPath.endsWith(".sh") || lowerPath.endsWith(".bat") || lowerPath.endsWith(".gitignore");
     }
 
     /**

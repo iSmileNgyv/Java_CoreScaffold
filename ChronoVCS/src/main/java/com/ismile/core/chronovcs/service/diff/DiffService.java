@@ -53,6 +53,18 @@ public class DiffService {
         }
     }
 
+    private static class DiffHunk {
+        private final int baseStart;
+        private final int baseEnd;
+        private final List<String> insertedLines;
+
+        private DiffHunk(int baseStart, int baseEnd, List<String> insertedLines) {
+            this.baseStart = baseStart;
+            this.baseEnd = baseEnd;
+            this.insertedLines = insertedLines;
+        }
+    }
+
     private final CommitRepository commitRepository;
     private final BranchHeadRepository branchHeadRepository;
     private final RepositoryService repositoryService;
@@ -524,6 +536,24 @@ public class DiffService {
         return text.replace("\r\n", "\n").replace("\r", "\n");
     }
 
+    public boolean canAutoMergeText(String baseText,
+                                    String targetText,
+                                    String sourceText,
+                                    boolean ignoreWhitespace) {
+        String baseNormalized = normalizeLineEndings(baseText == null ? "" : baseText);
+        String targetNormalized = normalizeLineEndings(targetText == null ? "" : targetText);
+        String sourceNormalized = normalizeLineEndings(sourceText == null ? "" : sourceText);
+
+        LineInfo[] baseLines = toLineInfos(baseNormalized.split("\n", -1), ignoreWhitespace);
+        LineInfo[] targetLines = toLineInfos(targetNormalized.split("\n", -1), ignoreWhitespace);
+        LineInfo[] sourceLines = toLineInfos(sourceNormalized.split("\n", -1), ignoreWhitespace);
+
+        List<DiffHunk> targetHunks = buildHunks(baseLines, targetLines);
+        List<DiffHunk> sourceHunks = buildHunks(baseLines, sourceLines);
+
+        return !hasOverlapConflicts(targetHunks, sourceHunks);
+    }
+
     private List<DiffOp> diffLines(LineInfo[] oldLines, LineInfo[] newLines) {
         int n = oldLines.length;
         int m = newLines.length;
@@ -612,6 +642,89 @@ public class DiffService {
 
         Collections.reverse(ops);
         return ops;
+    }
+
+    private List<DiffHunk> buildHunks(LineInfo[] baseLines, LineInfo[] otherLines) {
+        List<DiffOp> ops = diffLines(baseLines, otherLines);
+        List<DiffHunk> hunks = new ArrayList<>();
+
+        int baseIndex = 0;
+        int hunkStart = -1;
+        int deletedCount = 0;
+        List<String> inserted = new ArrayList<>();
+
+        for (DiffOp op : ops) {
+            switch (op.type) {
+                case EQUAL:
+                    if (hunkStart >= 0) {
+                        hunks.add(new DiffHunk(hunkStart, hunkStart + deletedCount, new ArrayList<>(inserted)));
+                        hunkStart = -1;
+                        deletedCount = 0;
+                        inserted.clear();
+                    }
+                    baseIndex++;
+                    break;
+                case DELETE:
+                    if (hunkStart < 0) {
+                        hunkStart = baseIndex;
+                    }
+                    deletedCount++;
+                    baseIndex++;
+                    break;
+                case INSERT:
+                    if (hunkStart < 0) {
+                        hunkStart = baseIndex;
+                    }
+                    inserted.add(op.line);
+                    break;
+            }
+        }
+
+        if (hunkStart >= 0) {
+            hunks.add(new DiffHunk(hunkStart, hunkStart + deletedCount, new ArrayList<>(inserted)));
+        }
+
+        return hunks;
+    }
+
+    private boolean hasOverlapConflicts(List<DiffHunk> targetHunks, List<DiffHunk> sourceHunks) {
+        for (DiffHunk target : targetHunks) {
+            for (DiffHunk source : sourceHunks) {
+                if (!rangesOverlap(target, source)) {
+                    continue;
+                }
+                if (!hunksEquivalent(target, source)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean rangesOverlap(DiffHunk first, DiffHunk second) {
+        boolean firstInsertion = first.baseStart == first.baseEnd;
+        boolean secondInsertion = second.baseStart == second.baseEnd;
+
+        if (firstInsertion && secondInsertion) {
+            return first.baseStart == second.baseStart;
+        }
+
+        if (firstInsertion) {
+            return first.baseStart >= second.baseStart && first.baseStart <= second.baseEnd;
+        }
+
+        if (secondInsertion) {
+            return second.baseStart >= first.baseStart && second.baseStart <= first.baseEnd;
+        }
+
+        return first.baseStart < second.baseEnd && second.baseStart < first.baseEnd;
+    }
+
+    private boolean hunksEquivalent(DiffHunk first, DiffHunk second) {
+        if (first.baseStart != second.baseStart || first.baseEnd != second.baseEnd) {
+            return false;
+        }
+        return first.insertedLines.equals(second.insertedLines);
     }
 
     private LineInfo[] toLineInfos(String[] lines, boolean ignoreWhitespace) {

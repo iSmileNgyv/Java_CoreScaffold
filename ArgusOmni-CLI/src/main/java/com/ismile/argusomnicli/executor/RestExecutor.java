@@ -33,7 +33,8 @@ import java.util.*;
 
 /**
  * REST/HTTP executor implementation.
- * Follows Open/Closed Principle - extends AbstractExecutor without modifying it.
+ * Follows Open/Closed Principle - extends AbstractExecutor without modifying
+ * it.
  * Follows Single Responsibility - only executes REST requests.
  */
 @Component
@@ -42,8 +43,8 @@ public class RestExecutor extends AbstractExecutor {
     private final WebClient.Builder webClientBuilder;
 
     public RestExecutor(VariableResolver variableResolver,
-                       ResponseExtractor responseExtractor,
-                       ObjectMapper objectMapper) {
+            ResponseExtractor responseExtractor,
+            ObjectMapper objectMapper) {
         super(variableResolver, responseExtractor);
         this.objectMapper = objectMapper;
         this.webClientBuilder = WebClient.builder();
@@ -131,12 +132,13 @@ public class RestExecutor extends AbstractExecutor {
                 }
                 // Check if value is explicit array config
                 else if (value instanceof Map && ((Map<?, ?>) value).containsKey("type")
-                         && "array".equals(((Map<?, ?>) value).get("type"))) {
+                        && "array".equals(((Map<?, ?>) value).get("type"))) {
                     Map<?, ?> arrayConfig = (Map<?, ?>) value;
                     String arrayFormat = arrayConfig.containsKey("arrayFormat")
-                        ? String.valueOf(arrayConfig.get("arrayFormat"))
-                        : "brackets";
-                    multipartInfo.put(entry.getKey(), "[ARRAY format=" + arrayFormat + ", items=" + arrayConfig.get("items") + "]");
+                            ? String.valueOf(arrayConfig.get("arrayFormat"))
+                            : "brackets";
+                    multipartInfo.put(entry.getKey(),
+                            "[ARRAY format=" + arrayFormat + ", items=" + arrayConfig.get("items") + "]");
                 }
                 // Check if value is file config
                 else if (value instanceof Map && ((Map<?, ?>) value).containsKey("path")) {
@@ -260,7 +262,8 @@ public class RestExecutor extends AbstractExecutor {
                 try {
                     Object parsedResponse = objectMapper.readValue(responseBody, Object.class);
                     if (context.isVerbose()) {
-                        System.out.println("  📥 Response: " + objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(parsedResponse));
+                        System.out.println("  📥 Response: "
+                                + objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(parsedResponse));
                     }
                     return parsedResponse;
                 } catch (Exception e) {
@@ -288,13 +291,15 @@ public class RestExecutor extends AbstractExecutor {
                 try {
                     Object errorResponse = objectMapper.readValue(errorBody, Object.class);
                     context.setVariable("_last_response", errorResponse);
+                    return errorResponse;
                 } catch (Exception parseEx) {
                     // If JSON parsing fails, store as string
                     context.setVariable("_last_response", errorBody);
+                    return errorBody;
                 }
             }
 
-            throw new Exception(String.format("HTTP %d: %s", e.getStatusCode().value(), e.getStatusText()));
+            return null;
 
         } catch (Exception e) {
             // Calculate response time even for errors
@@ -394,10 +399,9 @@ public class RestExecutor extends AbstractExecutor {
 
                 if (!cookieHeader.isEmpty()) {
                     return reactor.core.publisher.Mono.just(
-                        ClientRequest.from(request)
-                            .header(HttpHeaders.COOKIE, cookieHeader)
-                            .build()
-                    );
+                            ClientRequest.from(request)
+                                    .header(HttpHeaders.COOKIE, cookieHeader)
+                                    .build());
                 }
             }
 
@@ -486,11 +490,13 @@ public class RestExecutor extends AbstractExecutor {
      *
      * Examples:
      * 1. Simple file: { "photo": "/path/to/image.jpg" }
-     * 2. Advanced file: { "file": { "path": "/path/to/doc.pdf", "fieldName": "document", "contentType": "application/pdf" } }
+     * 2. Advanced file: { "file": { "path": "/path/to/doc.pdf", "fieldName":
+     * "document", "contentType": "application/pdf" } }
      * 3. Form field: { "name": "John Doe" }
      * 4. Mixed: { "photo": "/path/to/image.jpg", "name": "John", "age": "30" }
      * 5. Simple array: { "photos": ["/path/1.jpg", "/path/2.jpg"] }
-     * 6. Explicit array: { "photos": { "type": "array", "arrayFormat": "brackets", "items": [...] } }
+     * 6. Explicit array: { "photos": { "type": "array", "arrayFormat": "brackets",
+     * "items": [...] } }
      */
     private MultipartBodyBuilder buildMultipartBody(RestConfig config, ExecutionContext context) throws Exception {
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
@@ -549,7 +555,7 @@ public class RestExecutor extends AbstractExecutor {
      * Supports different array naming formats.
      */
     private void addArrayParts(MultipartBodyBuilder builder, String fieldName, java.util.List<Object> items,
-                               String arrayFormat, ExecutionContext context) throws Exception {
+            String arrayFormat, ExecutionContext context) throws Exception {
         for (int i = 0; i < items.size(); i++) {
             Object item = items.get(i);
             Object resolvedItem = variableResolver.resolveObject(item, context.getVariableContext());
@@ -575,7 +581,7 @@ public class RestExecutor extends AbstractExecutor {
      * Format: { type: "array", arrayFormat: "brackets", items: [...] }
      */
     private void addExplicitArrayParts(MultipartBodyBuilder builder, String fieldName,
-                                      Map<String, Object> config, ExecutionContext context) throws Exception {
+            Map<String, Object> config, ExecutionContext context) throws Exception {
         Object itemsObj = config.get("items");
         if (!(itemsObj instanceof java.util.List)) {
             throw new Exception("Array configuration must have 'items' as a list");
@@ -586,8 +592,8 @@ public class RestExecutor extends AbstractExecutor {
 
         // Get array format (default: brackets)
         String arrayFormat = config.containsKey("arrayFormat")
-            ? config.get("arrayFormat").toString()
-            : "brackets";
+                ? config.get("arrayFormat").toString()
+                : "brackets";
 
         addArrayParts(builder, fieldName, items, arrayFormat, context);
     }
@@ -601,7 +607,7 @@ public class RestExecutor extends AbstractExecutor {
             case "brackets" -> fieldName + "[]";
             case "indexed" -> fieldName + "[" + index + "]";
             case "same" -> fieldName;
-            default -> fieldName + "[]";  // Default to brackets
+            default -> fieldName + "[]"; // Default to brackets
         };
     }
 
@@ -641,15 +647,16 @@ public class RestExecutor extends AbstractExecutor {
         String contentType = detectContentType(filePath);
 
         builder.part(fieldName, fileResource)
-               .contentType(MediaType.parseMediaType(contentType))
-               .filename(file.getName());
+                .contentType(MediaType.parseMediaType(contentType))
+                .filename(file.getName());
     }
 
     /**
      * Add file part with advanced configuration.
      * Supports custom field name, content type, and filename.
      */
-    private void addFilePartAdvanced(MultipartBodyBuilder builder, String key, Map<String, Object> fileConfig, ExecutionContext context) throws Exception {
+    private void addFilePartAdvanced(MultipartBodyBuilder builder, String key, Map<String, Object> fileConfig,
+            ExecutionContext context) throws Exception {
         String filePath = variableResolver.resolve(fileConfig.get("path").toString(), context.getVariableContext());
         String fieldName = fileConfig.containsKey("fieldName")
                 ? variableResolver.resolve(fileConfig.get("fieldName").toString(), context.getVariableContext())
@@ -674,8 +681,8 @@ public class RestExecutor extends AbstractExecutor {
         FileSystemResource fileResource = new FileSystemResource(file);
 
         builder.part(fieldName, fileResource)
-               .contentType(MediaType.parseMediaType(contentType))
-               .filename(filename);
+                .contentType(MediaType.parseMediaType(contentType))
+                .filename(filename);
     }
 
     /**

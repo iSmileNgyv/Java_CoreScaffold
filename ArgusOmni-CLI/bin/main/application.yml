@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: ArgusOmni-CLI
+  main:
+    log-startup-info: false
+    banner-mode: off
+
+cli:
+  appName: "ArgusOmni Test Orchestrator"
+  alias: "argus"
+
+logging:
+  level:
+    root: off
+    org.springframework: off
+    org.springframework.boot: off

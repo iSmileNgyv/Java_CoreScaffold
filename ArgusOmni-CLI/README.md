@@ -253,8 +253,18 @@ multipart:
   bash:
     command: "ls -la /tmp"
   extract:
-    output: "$"
+    output: "all"
 ```
+
+**Bash extraction modes** — `$` is REST's JSONPath and does nothing here:
+
+| Pattern | Takes |
+|---------|-------|
+| `all` | the whole output |
+| `last` | the last line |
+| `line:N` | line N, counting from 0 |
+| any other | a regex; the first capturing group if there is one |
+
 
 **Complex Command:**
 ```yaml

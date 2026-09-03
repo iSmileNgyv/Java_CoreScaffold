@@ -111,6 +111,14 @@ public class BashExecutor implements TestExecutor {
             Map<String, Object> extracted = new HashMap<>();
             if (step.getExtract() != null && !step.getExtract().isEmpty()) {
                 extracted = extractVariables(output.toString(), step.getExtract(), context);
+                /*
+                 * Extracted values must reach the shared context, not just the report.
+                 * Without this a bash step could publish a value that no later step could
+                 * read: `{{name}}` resolved to nothing and the command silently ran with a
+                 * gap where the value should have been. Other executors go through
+                 * AbstractExecutor, which does this; this one builds its own result.
+                 */
+                extracted.forEach(context::setVariable);
             }
 
             // Build result
